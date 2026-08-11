@@ -812,6 +812,24 @@ module.exports = class Server {
         this.broadcastUiEvent('state-updated');
 
         return { success: true };
+      }))
+      .get('/api/api-key', defineEventHandler(async (event) => {
+        if (!event.node.req.session?.authenticated) {
+          const err = new Error('Session required');
+          err.statusCode = 401;
+          throw err;
+        }
+        const key = await this.__getApiKey();
+        return { apiKey: key || null };
+      }))
+      .post('/api/api-key/regen', defineEventHandler(async (event) => {
+        if (!event.node.req.session?.authenticated) {
+          const err = new Error('Session required');
+          err.statusCode = 401;
+          throw err;
+        }
+        const newKey = await this.__generateApiKey();
+        return { apiKey: newKey };
       }));
 
     // WireGuard
@@ -849,7 +867,20 @@ module.exports = class Server {
           }
 
           if (req.headers['authorization']) {
-            if (isPasswordValid(req.headers['authorization'], auth.passwordHash, auth.password)) {
+            const authHeader = req.headers['authorization'];
+            if (authHeader.startsWith('Bearer ')) {
+              const apiKey = await this.__getApiKey();
+              const providedKey = authHeader.slice(7);
+              if (apiKey && providedKey.length === apiKey.length
+                && crypto.timingSafeEqual(Buffer.from(providedKey), Buffer.from(apiKey))) {
+                return next();
+              }
+              res.statusCode = 401;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ error: 'Invalid API Key' }));
+              return;
+            }
+            if (isPasswordValid(authHeader, auth.passwordHash, auth.password)) {
               return next();
             }
             res.statusCode = 401;
@@ -1368,6 +1399,21 @@ module.exports = class Server {
       }
       : toNodeListener(app);
 
+    // Initialize API key if not exists
+    (async () => {
+      try {
+        const existingKey = await this.__getApiKey();
+        if (!existingKey) {
+          const newKey = await this.__generateApiKey();
+          // eslint-disable-next-line no-console
+          console.log(`[API] Generated new API key: ${newKey}`);
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[API] Failed to initialize API key:', err.message);
+      }
+    })();
+
     if (SSL_ENABLED) {
       const certExists = existsSync(SSL_CERT_PATH);
       const keyExists = existsSync(SSL_KEY_PATH);
@@ -1450,6 +1496,17 @@ module.exports = class Server {
         this.eventSubscribers.delete(subscriber);
       }
     }
+  }
+
+  async __getApiKey() {
+    const stored = await this.configStore.getApiKey().catch(() => null);
+    return typeof stored?.key === 'string' && stored.key ? stored.key : null;
+  }
+
+  async __generateApiKey() {
+    const key = 'awg_' + crypto.randomBytes(32).toString('base64url');
+    await this.configStore.setApiKey({ key, createdAt: new Date().toISOString() });
+    return key;
   }
 
   async __getEffectiveAuthSettings() {

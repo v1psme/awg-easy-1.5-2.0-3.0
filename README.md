@@ -56,6 +56,7 @@ Fork of [wg-easy](https://github.com/wg-easy/wg-easy) with added support for **A
 - HTTPS/SSL support with custom certificates
 - Session management with configurable max age (`MAX_AGE`)
 - Prometheus metrics endpoint (`/metrics`, `/metrics/json`) with optional Basic Auth
+- **API Key** — Bearer token authentication for external service integration (client management, uplinks, ACL, DNS)
 
 ### Telegram Bot
 - Long-polling bot for client management
@@ -366,6 +367,12 @@ Only active when `AMNEZIA_VERSION=3`. Values are ranges (`lo-hi`) or `(off)` to 
 |---|---|---|
 | `GET` | `/api/settings` | Get all settings |
 | `PUT` | `/api/settings` | Update settings |
+
+### API Key
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/api-key` | Get API key (session required) |
+| `POST` | `/api/api-key/regen` | Regenerate API key (session required) |
 
 ### WireGuard Clients
 | Method | Path | Description |

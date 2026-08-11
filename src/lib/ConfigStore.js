@@ -83,6 +83,18 @@ module.exports = class ConfigStore {
     });
   }
 
+  async getApiKey() {
+    return this.getJson('api_key', {
+      errorPrefix: 'Failed to read API key from SQLite',
+    });
+  }
+
+  async setApiKey(apiKey) {
+    return this.setJson('api_key', apiKey, {
+      errorPrefix: 'Failed to write API key to SQLite',
+    });
+  }
+
   async getJson(key, {
     errorPrefix = 'Failed to read JSON from SQLite',
   } = {}) {

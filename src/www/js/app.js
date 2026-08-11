@@ -193,6 +193,9 @@ new Vue({
           subscriptionPaymentNote: '',
         },
     },
+    apiKey: null,
+    apiKeyVisible: false,
+    apiKeyCopied: false,
     settingsSaving: false,
     uplinkSaving: false,
     uplinkSaveState: 'idle',
@@ -573,6 +576,34 @@ new Vue({
             : '',
         },
       };
+    },
+    async refreshApiKey() {
+      try {
+        const res = await this.api.getApiKey();
+        this.apiKey = res.apiKey || null;
+      } catch {
+        this.apiKey = null;
+      }
+    },
+    async copyApiKey() {
+      if (!this.apiKey) return;
+      try {
+        await navigator.clipboard.writeText(this.apiKey);
+        this.apiKeyCopied = true;
+        setTimeout(() => { this.apiKeyCopied = false; }, 2000);
+      } catch {
+        // fallback
+      }
+    },
+    async regenApiKey() {
+      if (!confirm(this.$t('apiKeyRegenConfirm'))) return;
+      try {
+        const res = await this.api.regenApiKey();
+        this.apiKey = res.apiKey || null;
+        this.apiKeyVisible = true;
+      } catch (err) {
+        alert(err.message || 'Failed to regenerate API key');
+      }
     },
     async loadAuthenticatedUiFlags() {
       try {
@@ -1981,6 +2012,9 @@ new Vue({
     syncPageFromHash() {
       const page = window.location.hash.replace('#', '');
       this.currentPage = ['clients', 'acl', 'uplink', 'dns-logs', 'settings'].includes(page) ? page : 'clients';
+      if (this.currentPage === 'settings') {
+        this.refreshApiKey().catch(() => {});
+      }
     },
     connectRealtime() {
       this.disconnectRealtime();
@@ -2009,7 +2043,7 @@ new Vue({
           this.refreshRoutingCategories(),
           this.refreshDnsRouting({ fromSse: true }),
           this.currentPage === 'dns-logs' ? this.refreshDnsLogs() : Promise.resolve(),
-          this.currentPage === 'settings' ? this.refreshSettings() : Promise.resolve(),
+          this.currentPage === 'settings' ? this.refreshSettings().then(() => this.refreshApiKey()) : Promise.resolve(),
         ]).catch(console.error);
       };
 
@@ -2168,6 +2202,9 @@ new Vue({
           this.notifyError(err);
         });
         this.refreshSettings().catch((err) => {
+          this.notifyError(err);
+        });
+        this.refreshApiKey().catch((err) => {
           this.notifyError(err);
         });
         this.refreshDnsLogs().catch((err) => {

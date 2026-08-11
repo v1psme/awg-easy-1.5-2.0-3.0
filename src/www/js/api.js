@@ -126,6 +126,20 @@ class API {
     });
   }
 
+  async getApiKey() {
+    return this.call({
+      method: 'get',
+      path: '/api-key',
+    });
+  }
+
+  async regenApiKey() {
+    return this.call({
+      method: 'post',
+      path: '/api-key/regen',
+    });
+  }
+
   async getSettings() {
     return this.call({
       method: 'get',

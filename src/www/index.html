@@ -2618,6 +2618,26 @@
               </div>
 
               <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div class="console-section-title">{{$t("apiKeyTitle")}}</div>
+                <div class="space-y-3">
+                  <div class="console-metric-label">{{$t("apiKeyLabel")}}</div>
+                  <div class="flex items-center gap-2">
+                    <code class="flex-1 bg-gray-100 dark:bg-neutral-900 px-3 py-2 rounded text-sm font-mono select-all">{{ apiKeyVisible ? apiKey : '●'.repeat(43) }}</code>
+                    <button @click="apiKeyVisible = !apiKeyVisible" class="console-btn-secondary text-xs px-2 py-2">
+                      {{ apiKeyVisible ? $t('apiKeyHide') : $t('apiKeyShow') }}
+                    </button>
+                    <button @click="copyApiKey()" class="console-btn-secondary text-xs px-2 py-2">
+                      {{ apiKeyCopied ? $t('apiKeyCopied') : $t('apiKeyCopy') }}
+                    </button>
+                    <button @click="regenApiKey()" class="console-btn-secondary text-xs px-2 py-2">
+                      {{ $t('apiKeyRegen') }}
+                    </button>
+                  </div>
+                  <div class="text-xs text-gray-500 dark:text-neutral-400">{{$t("apiKeyHint")}}</div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
                 <div class="console-section-title">{{$t("telegramSettingsTitle")}}</div>
                 <label class="console-acl-toggle">
                   <input v-model="settings.telegram.enabled" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
