@@ -32,6 +32,7 @@ const WireGuard = require('../services/WireGuard');
 const TelegramBot = require('../services/TelegramBot');
 const ConfigStore = require('./ConfigStore');
 const SqliteMigrator = require('./db/SqliteMigrator');
+const ApiV1Router = require('./ApiV1Router');
 
 const {
   PORT,
@@ -841,7 +842,7 @@ module.exports = class Server {
             return next();
           }
 
-          if (req.url === '/api/session' || req.url === '/api/setup' || req.url === '/api/setup-state') {
+          if (req.url === '/api/session' || req.url === '/api/setup' || req.url === '/api/setup-state' || req.url.startsWith('/api/v1/')) {
             return next();
           }
 
@@ -1304,6 +1305,14 @@ module.exports = class Server {
         }
         return '';
       }));
+
+    // REST API v1 — Bearer token auth (for RedNetline admin panel)
+    const apiV1 = new ApiV1Router({
+      wireGuard: WireGuard,
+      configStore: this.configStore,
+      config: require('../config'),
+    });
+    apiV1.mount(app);
 
     // backup_restore
     const router3 = createRouter();
