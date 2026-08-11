@@ -358,6 +358,7 @@ module.exports = class Server {
         httpOnly: true,
         sameSite: 'lax',
         secure: SSL_ENABLED,
+        path: webPath || '/',
       },
     })));
 
