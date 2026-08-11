@@ -11,9 +11,9 @@ services:
     env_file:
       - .env
     volumes:
-    - ./data:/etc/amnezia/amneziawg
-    - /root/cert:/cert:ro
-    - /etc/wireguard/uplinks:/etc/wireguard/uplinks:rw
+      - ./data:/etc/amnezia/amneziawg
+      - /root/cert:/cert:ro
+      - /etc/wireguard/uplinks:/etc/wireguard/uplinks:rw
     ports:
       - "${WG_PORT:-51820}:${WG_PORT:-51820}/udp"
       - "${PORT:-51821}:${PORT:-51821}/tcp"
@@ -26,9 +26,9 @@ services:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
     networks:
-      - rednet
+      - appnet
     devices:
       - /dev/net/tun:/dev/net/tun
 networks:
-  rednet:
+  appnet:
     name: rednet${CONTAINER_SUFFIX}
