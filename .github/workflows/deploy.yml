@@ -55,8 +55,8 @@ jobs:
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: v1psme
+          password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Read release version
         run: echo "RELEASE=$(jq -r '.release.version' ./src/package.json)" >> "$GITHUB_ENV"
