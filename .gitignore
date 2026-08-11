@@ -1,0 +1,72 @@
+/config
+/wg0.conf
+/wg0.json
+/awg*.conf
+/awg*.json
+/amn*.conf
+/src/node_modules
+.DS_Store
+*.swp
+*.swo
+*~
+.idea
+
+# Local environment / secrets
+.env
+.env.*
+.env.backup.*
+.env.save*
+!.env_example
+!.env.example
+
+# docker-compose local overrides
+docker-compose.override.yml
+
+# Private keys / certificates / VPN profiles
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+*.ovpn
+id_rsa
+id_rsa_*
+id_ed25519
+id_ed25519_*
+
+# Databases (SQLite)
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Logs & runtime artifacts
+*.pid
+*.log
+*.bak
+*.conf.bak
+*.tar.gz
+
+# Core dumps
+core
+core.*
+
+# Local runtime state
+/tmp/
+/wg/
+/data/
+/cert/
+/uplinks/*.conf
+/amnezia_cookies.txt
+
+# GeoSite git clone (created at runtime)
+/bypass/geosite-data/
+
+# DNS resolve cache
+/dns-resolve-cache.json
+
+# Project backups
+/backups/
+
+# SSH/VPS credentials
+/ssh*

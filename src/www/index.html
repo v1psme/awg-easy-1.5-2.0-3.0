@@ -1,0 +1,2809 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>AmneziaWG</title>
+  <meta charset="utf-8"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="./css/app.css" rel="stylesheet">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./img/favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="./img/apple-touch-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<style>
+  :root {
+    --console-bg: #d9dde3;
+    --console-grid: rgba(18, 37, 63, 0.06);
+    --console-panel: #f4f6f8;
+    --console-panel-strong: #ffffff;
+    --console-line: #b8c2cf;
+    --console-line-strong: #8b98ab;
+    --console-text: #1d2938;
+    --console-text-muted: #5f6b7d;
+    --console-accent: #2f5f99;
+    --console-accent-strong: #224873;
+    --console-danger: #a33a32;
+    --console-ok: #3f7c45;
+    --console-shadow: 0 20px 60px rgba(28, 44, 69, 0.14);
+  }
+
+  [v-cloak] {
+    display: none;
+  }
+
+  .line-chart .apexcharts-svg{
+    transform: translateY(3px);
+  }
+
+  body.console-body {
+    min-height: 100vh;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18)),
+      linear-gradient(90deg, var(--console-grid) 1px, transparent 1px),
+      linear-gradient(var(--console-grid) 1px, transparent 1px),
+      var(--console-bg);
+    background-size: auto, 24px 24px, 24px 24px, auto;
+    color: var(--console-text);
+    font-family: "IBM Plex Sans", "Segoe UI", Tahoma, sans-serif;
+  }
+
+  .dark body.console-body {
+    --console-bg: #0f1117;
+    --console-grid: rgba(200, 50, 50, 0.03);
+    --console-panel: #1a1d25;
+    --console-panel-strong: #222630;
+    --console-line: #2d323d;
+    --console-line-strong: #3d4352;
+    --console-text: #e8eaef;
+    --console-text-muted: #9ca3b0;
+    --console-accent: #c94040;
+    --console-accent-strong: #e05555;
+    --console-danger: #d06b64;
+    --console-ok: #6cb577;
+    --console-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  }
+
+  .console-shell {
+    max-width: 1340px;
+    margin: 0 auto;
+    padding: 18px 12px 40px;
+  }
+
+  .console-topbar {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(228, 233, 240, 0.94));
+    box-shadow: var(--console-shadow);
+  }
+
+  .dark .console-topbar {
+    background: linear-gradient(180deg, rgba(45, 54, 68, 0.96), rgba(28, 35, 45, 0.96));
+  }
+
+  .console-brand-strip {
+    border-bottom: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(55, 90, 133, 0.15), rgba(255, 255, 255, 0));
+  }
+
+  .console-brand-title {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    color: var(--console-text);
+  }
+
+  .console-subtitle {
+    color: var(--console-text-muted);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+  }
+
+  .console-control {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, var(--console-panel-strong), #e8edf2);
+    color: var(--console-text);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+
+  .dark .console-control {
+    background: linear-gradient(180deg, #303949, #262f3e);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .console-control:hover {
+    border-color: var(--console-line-strong);
+  }
+
+  .console-tabbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid var(--console-line);
+    border-top: none;
+    background: var(--console-panel);
+    box-shadow: var(--console-shadow);
+  }
+
+  .console-tab {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, var(--console-panel-strong), #dfe6ee);
+    color: var(--console-text-muted);
+    border-radius: 0;
+    width: 100%;
+    text-align: center;
+  }
+
+  .dark .console-tab {
+    background: linear-gradient(180deg, #2a3341, #212a37);
+  }
+
+  .console-tab.is-active {
+    color: #fff;
+    border-color: var(--console-accent-strong);
+    background: linear-gradient(180deg, var(--console-accent), var(--console-accent-strong));
+  }
+
+  .console-panel {
+    border: 1px solid var(--console-line);
+    background: var(--console-panel);
+    box-shadow: var(--console-shadow);
+  }
+
+  .console-panel-header {
+    border-bottom: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(219, 226, 235, 0.78));
+  }
+
+  .dark .console-panel-header {
+    background: linear-gradient(180deg, rgba(57, 68, 85, 0.85), rgba(35, 44, 56, 0.86));
+  }
+
+  .console-section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--console-text);
+  }
+
+  .console-section-note {
+    color: var(--console-text-muted);
+    font-size: 0.83rem;
+  }
+
+  .console-client-row {
+    border-bottom: 1px solid rgba(133, 146, 165, 0.22);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(235, 239, 244, 0.65));
+  }
+
+  .dark .console-client-row {
+    background: linear-gradient(180deg, rgba(42, 50, 63, 0.92), rgba(31, 38, 48, 0.86));
+  }
+
+  .console-client-row:hover {
+    background: linear-gradient(180deg, rgba(245, 248, 251, 0.96), rgba(227, 233, 240, 0.94));
+  }
+
+  .dark .console-client-row:hover {
+    background: linear-gradient(180deg, rgba(53, 63, 78, 0.96), rgba(35, 44, 57, 0.94));
+  }
+
+  .console-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 0;
+    border: 1px solid var(--console-line);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--console-text-muted);
+    font-size: 0.74rem;
+    font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  }
+
+  .dark .console-pill {
+    background: rgba(17, 23, 31, 0.45);
+  }
+
+  .console-metric {
+    min-width: 104px;
+    padding: 10px 12px;
+    border: 1px solid rgba(145, 157, 174, 0.28);
+    background: rgba(255, 255, 255, 0.62);
+    border-radius: 10px;
+  }
+
+  .dark .console-metric {
+    background: rgba(18, 23, 31, 0.4);
+  }
+
+  .console-metric-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--console-text-muted);
+  }
+
+  .console-metric-value {
+    margin-top: 4px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--console-text);
+  }
+
+  .console-action {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, var(--console-panel-strong), #e8edf2);
+    color: var(--console-text);
+    border-radius: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+  }
+
+  .dark .console-action {
+    background: linear-gradient(180deg, #303949, #262f3e);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .console-action:hover {
+    border-color: var(--console-accent);
+    color: #fff;
+    background: linear-gradient(180deg, var(--console-accent), var(--console-accent-strong));
+  }
+
+  .console-action.is-danger:hover {
+    border-color: var(--console-danger);
+    background: linear-gradient(180deg, #b74b42, var(--console-danger));
+  }
+
+  .console-acl-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .console-acl-hero {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(229, 235, 242, 0.96));
+    box-shadow: var(--console-shadow);
+  }
+
+  .dark .console-acl-hero {
+    background: linear-gradient(180deg, rgba(45, 54, 68, 0.96), rgba(30, 38, 49, 0.96));
+  }
+
+  .console-acl-hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.85fr);
+    gap: 20px;
+    align-items: start;
+    padding: 22px;
+  }
+
+  .console-acl-copy {
+    max-width: 50rem;
+  }
+
+  .console-acl-copy .console-subtitle {
+    margin-bottom: 10px;
+  }
+
+  .console-acl-lead {
+    margin-top: 12px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--console-text-muted);
+  }
+
+  .console-acl-detail {
+    margin-top: 10px;
+    font-size: 0.86rem;
+    line-height: 1.55;
+    color: var(--console-text-muted);
+  }
+
+  .console-acl-settings {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(229, 235, 242, 0.92));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .dark .console-acl-settings {
+    background: linear-gradient(180deg, rgba(45, 54, 68, 0.96), rgba(30, 38, 49, 0.96));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .console-acl-settings-title {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    color: var(--console-text-muted);
+  }
+
+  .console-acl-settings-note {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--console-text-muted);
+  }
+
+  .console-uplink-dns-card {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(235, 240, 246, 0.96));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .dark .console-uplink-dns-card {
+    background: linear-gradient(180deg, rgba(41, 49, 62, 0.96), rgba(31, 39, 50, 0.96));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .console-uplink-dns-address {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(236, 241, 247, 0.88));
+    color: var(--console-text);
+    font-family: "Consolas", "SFMono-Regular", monospace;
+  }
+
+  .dark .console-uplink-dns-address {
+    background: linear-gradient(180deg, rgba(21, 27, 36, 0.92), rgba(18, 24, 32, 0.92));
+  }
+
+  .console-log-view {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(18, 26, 37, 0.98), rgba(14, 20, 29, 0.98));
+    color: #d7e1ec;
+    font-family: "Consolas", "SFMono-Regular", monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    min-height: 24rem;
+    max-height: 68vh;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .console-acl-toggle {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--console-line);
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .dark .console-acl-toggle {
+    background: rgba(18, 24, 32, 0.52);
+  }
+
+  .console-acl-toggle-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .console-acl-toggle-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--console-text);
+  }
+
+  .console-acl-toggle-hint {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: var(--console-text-muted);
+  }
+
+  .console-acl-save {
+    align-self: stretch;
+  }
+
+  .console-summary-card {
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(232, 237, 243, 0.92));
+    box-shadow: var(--console-shadow);
+  }
+
+  .dark .console-summary-card {
+    background: linear-gradient(180deg, rgba(48, 58, 73, 0.95), rgba(34, 43, 55, 0.96));
+  }
+
+  .console-rule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .console-rule-row {
+    border: 1px solid rgba(145, 157, 174, 0.28);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(240, 244, 248, 0.94));
+    padding: 12px;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+  }
+
+  .dark .console-rule-row {
+    background: linear-gradient(180deg, rgba(38, 47, 59, 0.98), rgba(29, 36, 46, 0.98));
+  }
+
+  .console-rule-row.is-dragging {
+    opacity: 0.65;
+  }
+
+  .console-rule-row.is-drop-target {
+    border-color: var(--console-accent);
+    box-shadow: 0 0 0 2px rgba(63, 107, 170, 0.14);
+  }
+
+  .console-rule-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .console-rule-order {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .console-rule-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    border: 1px solid var(--console-line);
+    background: rgba(255, 255, 255, 0.74);
+    color: var(--console-text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .dark .console-rule-index {
+    background: rgba(18, 24, 32, 0.78);
+  }
+
+  .console-rule-top-note {
+    color: var(--console-text-muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .console-rule-flags {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .console-rule-main {
+    display: grid;
+    grid-template-columns: 132px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+  }
+
+  .console-rule-action {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    grid-row: 1 / span 2;
+  }
+
+  .console-rule-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid rgba(145, 157, 174, 0.2);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .dark .console-rule-block {
+    background: rgba(17, 23, 31, 0.28);
+  }
+
+  .console-rule-block-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--console-text-muted);
+    padding-left: 2px;
+  }
+
+  .console-rule-selector {
+    display: grid;
+    grid-template-columns: 114px minmax(0, 1fr);
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .console-rule-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 10px;
+    margin-top: 10px;
+    border-top: 1px solid rgba(145, 157, 174, 0.16);
+  }
+
+  .console-rule-meta-left,
+  .console-rule-meta-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .console-rule-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: 1px solid var(--console-line);
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--console-text-muted);
+    cursor: grab;
+    user-select: none;
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .dark .console-rule-handle {
+    background: rgba(20, 26, 35, 0.85);
+  }
+
+  .console-rule-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    height: 30px;
+    border-radius: 8px;
+    border: 1px solid var(--console-line);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--console-text-muted);
+    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .dark .console-rule-toggle {
+    background: rgba(20, 26, 35, 0.88);
+  }
+
+  .console-rule-toggle input {
+    margin: 0;
+  }
+
+  .console-rule-remove {
+    min-width: 92px;
+  }
+
+  @media (max-width: 1279px) {
+    .console-rule-action {
+      grid-row: auto;
+      max-width: 220px;
+    }
+
+    .console-rule-main {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .console-acl-hero-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .console-rule-topbar,
+    .console-rule-footer {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .console-rule-flags,
+    .console-rule-meta-left,
+    .console-rule-meta-right {
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .console-rule-main,
+    .console-rule-selector {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .console-input,
+  .console-select {
+    width: 100%;
+    border: 1px solid var(--console-line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.88);
+    color: var(--console-text);
+    padding: 10px 12px;
+    outline: none;
+  }
+
+  .dark .console-input,
+  .dark .console-select {
+    background: rgba(20, 26, 35, 0.92);
+  }
+
+  .console-input:focus,
+  .console-select:focus {
+    border-color: var(--console-accent);
+    box-shadow: 0 0 0 3px rgba(63, 107, 170, 0.15);
+  }
+
+  .console-empty {
+    border: 1px dashed var(--console-line-strong);
+    background: rgba(255, 255, 255, 0.55);
+    color: var(--console-text-muted);
+  }
+
+  .dark .console-empty {
+    background: rgba(19, 25, 34, 0.52);
+  }
+
+  .console-topbar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+  }
+
+  .console-brand-meta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    min-width: 0;
+  }
+
+  .console-brand-mark {
+    width: 68px;
+    height: 68px;
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(224, 230, 238, 0.95));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dark .console-brand-mark {
+    background: linear-gradient(180deg, rgba(54, 65, 81, 0.96), rgba(34, 43, 55, 0.96));
+  }
+
+  .console-meta-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .console-topbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .console-page {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .console-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+  }
+
+  .console-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--console-line);
+  }
+
+  .console-toolbar-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .console-toolbar-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--console-text-muted);
+  }
+
+  .console-client-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .console-client-row-inner {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px;
+  }
+
+  .console-client-main {
+    flex: 1 1 620px;
+    min-width: 0;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .console-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    border: 1px solid var(--console-line);
+    background: rgba(255, 255, 255, 0.86);
+    position: relative;
+    overflow: hidden;
+    flex: 0 0 auto;
+  }
+
+  .dark .console-avatar {
+    background: rgba(18, 24, 32, 0.88);
+  }
+
+  .console-client-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .console-client-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .console-client-name {
+    font-size: 1.03rem;
+    font-weight: 700;
+    color: var(--console-text);
+  }
+
+  .console-client-inline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .console-client-groups {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .console-group-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--console-line);
+    background: rgba(255, 255, 255, 0.68);
+    font-size: 0.74rem;
+    color: var(--console-text-muted);
+  }
+
+  .dark .console-group-tag {
+    background: rgba(16, 22, 30, 0.5);
+  }
+
+  .console-linkline {
+    font-size: 0.78rem;
+    color: var(--console-text-muted);
+    word-break: break-all;
+  }
+
+  .console-linkline a {
+    color: var(--console-accent);
+  }
+
+  .console-client-aside {
+    flex: 1 1 440px;
+    min-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .console-metrics-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .console-actions-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .console-client-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+
+  .console-client-actions-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .console-client-action {
+    min-height: 34px;
+    padding: 0.45rem 0.78rem;
+    font-size: 0.78rem;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  }
+
+  .console-client-action.console-switch {
+    min-width: 112px;
+  }
+
+  .console-client-action.is-secondary {
+    background: linear-gradient(180deg, rgba(250, 252, 253, 0.96), rgba(236, 241, 246, 0.96));
+  }
+
+  .dark .console-client-action.is-secondary {
+    background: linear-gradient(180deg, rgba(48, 58, 72, 0.98), rgba(34, 43, 56, 0.98));
+  }
+
+  .console-client-action.is-secondary:hover {
+    background: linear-gradient(180deg, var(--console-accent), var(--console-accent-strong));
+  }
+
+  .console-client-action.is-danger {
+    margin-left: auto;
+  }
+
+  .console-client-action.is-primary {
+    font-weight: 500;
+  }
+
+  .opacity-50 {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .console-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 10px;
+    border-radius: 0;
+    border: 1px solid var(--console-line);
+    font-size: 0.74rem;
+    color: var(--console-text-muted);
+    background: rgba(255, 255, 255, 0.72);
+    font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  }
+
+  .dark .console-status-badge {
+    background: rgba(17, 23, 31, 0.45);
+  }
+
+  .console-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--console-line-strong);
+  }
+
+  .console-status-badge.is-online .console-status-dot,
+  .console-status-badge.is-enabled .console-status-dot {
+    background: var(--console-ok);
+  }
+
+  .console-status-badge.is-disabled .console-status-dot {
+    background: var(--console-danger);
+  }
+
+  .console-switch {
+    min-width: 98px;
+    justify-content: center;
+  }
+
+  .console-empty-state {
+    padding: 42px 24px;
+    text-align: center;
+  }
+
+  .console-toast-stack {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 1100;
+    width: min(420px, calc(100vw - 24px));
+    pointer-events: none;
+  }
+
+  .console-toast {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(232, 237, 243, 0.98));
+    box-shadow: var(--console-shadow);
+    padding: 14px 16px;
+    pointer-events: auto;
+  }
+
+  .dark .console-toast {
+    background: linear-gradient(180deg, rgba(45, 54, 68, 0.98), rgba(27, 34, 44, 0.98));
+  }
+
+  .console-toast.is-success {
+    border-color: rgba(63, 124, 69, 0.45);
+  }
+
+  .console-toast.is-error {
+    border-color: rgba(163, 58, 50, 0.5);
+  }
+
+  .console-toast-mark {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    margin-top: 4px;
+    flex: 0 0 auto;
+    background: var(--console-accent);
+  }
+
+  .console-toast.is-success .console-toast-mark {
+    background: var(--console-ok);
+  }
+
+  .console-toast.is-error .console-toast-mark {
+    background: var(--console-danger);
+  }
+
+  .console-toast-copy {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .console-toast-title {
+    font-size: 0.74rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--console-text-muted);
+  }
+
+  .console-toast-message {
+    margin-top: 4px;
+    font-size: 0.94rem;
+    line-height: 1.55;
+    color: var(--console-text);
+    word-break: break-word;
+  }
+
+  .console-toast-close {
+    border: 1px solid var(--console-line);
+    background: transparent;
+    color: var(--console-text-muted);
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+  }
+
+  .console-toast-close:hover {
+    color: var(--console-text);
+    border-color: var(--console-line-strong);
+  }
+
+  .console-login-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .console-login-card {
+    width: 100%;
+    max-width: 420px;
+    border: 1px solid var(--console-line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(232, 237, 243, 0.96));
+    box-shadow: var(--console-shadow);
+  }
+
+  .dark .console-login-card {
+    background: linear-gradient(180deg, rgba(45, 54, 68, 0.98), rgba(27, 34, 44, 0.98));
+  }
+
+  .console-login-header {
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--console-line);
+  }
+
+  .console-login-body {
+    padding: 24px;
+  }
+
+  @media (max-width: 960px) {
+  }
+
+  @media (max-width: 640px) {
+    .console-shell {
+      padding: 12px 8px 28px;
+    }
+
+    .console-topbar-inner {
+      padding: 14px;
+    }
+
+    .console-brand-meta {
+      align-items: flex-start;
+    }
+
+    .console-brand-mark {
+      width: 56px;
+      height: 56px;
+    }
+
+    .console-brand-title {
+      font-size: 1.45rem;
+    }
+
+    .console-summary-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .console-acl-hero-grid {
+      grid-template-columns: 1fr;
+      padding: 18px;
+      gap: 18px;
+    }
+
+    .console-client-row-inner {
+      padding: 14px;
+    }
+
+    .console-toast-stack {
+      top: 10px;
+      right: 10px;
+      left: 10px;
+      width: auto;
+    }
+
+    .console-client-main,
+    .console-client-aside {
+      flex-basis: 100%;
+      min-width: 0;
+    }
+
+    .console-metrics-row,
+    .console-actions-grid {
+      justify-content: flex-start;
+    }
+  }
+</style>
+
+<body class="console-body">
+  <div id="app">
+    <div v-if="notification.visible" class="console-toast-stack">
+      <div class="console-toast" :class="`is-${notification.tone}`">
+        <div class="console-toast-mark"></div>
+        <div class="console-toast-copy">
+          <div class="console-toast-title">{{notification.tone === 'error' ? $t('notificationError') : $t('notificationInfo')}}</div>
+          <div class="console-toast-message">{{notification.message}}</div>
+        </div>
+        <button @click="dismissNotification" class="console-toast-close inline-flex items-center justify-center">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div v-cloak class="console-shell">
+      <div v-if="authenticated === true" class="console-page">
+        <div class="console-topbar">
+          <div class="console-brand-strip">
+            <div class="console-topbar-inner">
+              <div class="console-brand-meta">
+                <div class="console-brand-mark">
+                  <img src="./img/logo.svg" width="42" class="block" />
+                </div>
+                <div class="min-w-0">
+                  <div class="console-subtitle">{{serviceName}} — {{$t('dashboardSubtitle')}}</div>
+                  <h1 class="console-brand-title">AmneziaWG. <span style="font-size:50%;opacity:0.7;font-weight:400;">{{$t('awgVersionLabel')}} {{awgVersion}}</span></h1>
+                  <div class="console-meta-grid mt-3">
+                    <span class="console-pill">{{$t('clients')}}: {{Array.isArray(clients) ? clients.length : 0}}</span>
+                    <span class="console-pill">{{$t('onlineClients')}}: {{clientsOnlineCount}}</span>
+                    <span class="console-pill">{{$t('aclRulesCount')}}: {{aclEnabledRuleCount}}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="console-topbar-actions">
+                <div class="relative z-50" ref="languageMenu">
+                  <button type="button" @click.stop="toggleLanguageMenu" :title="$t('language')" ref="languageMenuButton"
+                    class="console-control px-3 py-2 text-xs inline-flex items-center gap-2">
+                    <span class="text-[11px] uppercase tracking-[0.16em] text-gray-500 dark:text-neutral-400">{{$t('language')}}</span>
+                    <span class="font-medium">{{currentLanguageLabel}}</span>
+                    <svg class="w-3 h-3 text-gray-500 dark:text-neutral-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div v-if="languageMenuOpen"
+                    class="overflow-hidden rounded-xl shadow-xl bg-white dark:bg-neutral-700 border border-gray-200 dark:border-neutral-600"
+                    :style="languageMenuStyle">
+                    <div class="px-3 py-2 text-[11px] uppercase tracking-wide text-gray-400 dark:text-neutral-400 border-b border-gray-100 dark:border-neutral-600">
+                      {{$t('language')}}
+                    </div>
+                    <button type="button" v-for="lang in languageOptions" :key="lang.code"
+                      @click.stop="selectLanguage(lang.code)"
+                      class="w-full flex items-center justify-between text-left px-3 py-2.5 text-sm text-gray-700 dark:text-neutral-200 hover:bg-gray-50 dark:hover:bg-neutral-600 transition border-b last:border-b-0 border-gray-100 dark:border-neutral-600"
+                      :class="{ 'bg-gray-50 dark:bg-neutral-600': uiLanguage === lang.code }">
+                      <span>{{lang.label}}</span>
+                      <svg v-if="uiLanguage === lang.code" class="w-4 h-4 text-red-800 dark:text-red-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <button @click="toggleTheme" class="console-control w-10 h-10 flex items-center justify-center" :title="$t(`theme.${theme}`)">
+                  <svg v-if="theme === 'light'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" />
+                  </svg>
+                  <svg v-else-if="theme === 'dark'" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-neutral-400">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24" class="w-5 h-5 fill-gray-600 dark:fill-neutral-400">
+                    <path d="M12,2.2c-5.4,0-9.8,4.4-9.8,9.8s4.4,9.8,9.8,9.8s9.8-4.4,9.8-9.8S17.4,2.2,12,2.2z M3.8,12c0-4.5,3.7-8.2,8.2-8.2v16.5C7.5,20.2,3.8,16.5,3.8,12z" />
+                  </svg>
+                </button>
+
+                <label v-if="uiChartType > 0" class="console-control inline-flex items-center justify-center cursor-pointer w-10 h-10 group" :title="$t('toggleCharts')">
+                  <input type="checkbox" value="" class="sr-only peer" v-model="uiShowCharts" @change="toggleCharts">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" fill="currentColor"
+                    class="w-5 h-5 peer fill-gray-400 peer-checked:fill-gray-700 dark:fill-neutral-500 peer-checked:dark:fill-neutral-200 transition">
+                    <path d="M18.375 2.25c-1.035 0-1.875.84-1.875 1.875v15.75c0 1.035.84 1.875 1.875 1.875h.75c1.035 0 1.875-.84 1.875-1.875V4.125c0-1.036-.84-1.875-1.875-1.875h-.75ZM9.75 8.625c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v11.25c0 1.035-.84 1.875-1.875 1.875h-.75a1.875 1.875 0 0 1-1.875-1.875V8.625ZM3 13.125c0-1.036.84-1.875 1.875-1.875h.75c1.036 0 1.875.84 1.875 1.875v6.75c0 1.035-.84 1.875-1.875 1.875h-.75A1.875 1.875 0 0 1 3 19.875v-6.75Z" />
+                  </svg>
+                </label>
+
+                <button v-if="requiresPassword" @click="logout" class="console-control px-3 py-2 text-sm inline-flex items-center gap-2">
+                  <span>{{$t("logout")}}</span>
+                  <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="latestRelease" class="console-panel overflow-hidden" :title="`v${currentRelease} → v${latestRelease.version}`">
+          <div class="console-panel-header px-4 py-3 flex flex-col lg:flex-row gap-3 lg:items-center lg:justify-between">
+            <div>
+              <div class="console-subtitle">{{$t("updateAvailable")}}</div>
+              <div class="mt-1 text-sm text-gray-700 dark:text-neutral-200">{{latestRelease.changelog}}</div>
+            </div>
+            <a href="https://github.com/wg-easy/wg-easy#updating" target="_blank"
+              class="console-action px-4 py-2 text-sm font-medium inline-flex items-center justify-center">
+              {{$t("update")}} →
+            </a>
+          </div>
+        </div>
+
+        <div class="console-tabbar">
+          <button v-for="tab in navigationTabs" :key="tab.id" @click="setPage(tab.id)"
+            class="console-tab px-4 py-2 text-sm font-semibold transition"
+            :class="{ 'is-active': currentPage === tab.id }">
+            {{tab.label}}
+          </button>
+        </div>
+
+        <div v-show="currentPage === 'clients'" class="console-page">
+          <div class="console-summary-grid">
+            <div v-for="card in clientSummaryCards" :key="card.label" class="console-summary-card p-4">
+              <div class="console-metric-label">{{card.label}}</div>
+              <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-neutral-100">{{card.value}}</div>
+            </div>
+          </div>
+
+          <div class="console-panel overflow-hidden">
+            <div class="console-panel-header">
+              <div class="console-toolbar">
+                <div>
+                  <div class="console-section-title">{{$t("clients")}}</div>
+                  <div class="console-section-note mt-1">{{$t("clientsSubtitle")}}</div>
+                </div>
+                <div class="console-toolbar-group">
+                  <span class="console-toolbar-label">{{$t("quickActions")}}</span>
+                  <label for="inputRC" :title="$t('titleRestoreConfig')"
+                    class="console-action px-3 py-2 text-sm inline-flex items-center gap-2 cursor-pointer">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                    </svg>
+                    <span>{{$t("restore")}}</span>
+                    <input id="inputRC" type="file" name="configurationfile" accept="text/*,.json" @change="restoreConfig" class="hidden"/>
+                  </label>
+                  <a href="./api/wireguard/backup" :title="$t('titleBackupConfig')"
+                    class="console-action px-3 py-2 text-sm inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 0 1-3-3m3 3a3 3 0 1 0 0 6h13.5a3 3 0 1 0 0-6m-16.5-3a3 3 0 0 1 3-3h13.5a3 3 0 0 1 3 3m-19.5 0a4.5 4.5 0 0 1 .9-2.7L5.737 5.1a3.375 3.375 0 0 1 2.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 0 1 .9 2.7m0 0a3 3 0 0 1-3 3m0 3h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Zm-3 6h.008v.008h-.008v-.008Zm0-6h.008v.008h-.008v-.008Z" />
+                    </svg>
+                    <span>{{$t("backup")}}</span>
+                  </a>
+                  <select v-model="sortField" class="console-select text-sm" style="width:auto">
+                    <option value="name">{{$t('sortByNameAZ')}}</option>
+                    <option value="telegramId">{{$t('sortByTelegramAZ')}}</option>
+                    <option value="email">{{$t('sortByEmailAZ')}}</option>
+                    <option value="groups">{{$t('sortByGroupsAZ')}}</option>
+                    <option value="createdAt">{{$t('sortByCreatedNew')}}</option>
+                    <option value="expiredAt">{{$t('sortByExpiring')}}</option>
+                  </select>
+                  <button @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'"
+                    class="console-action px-3 py-2 text-sm inline-flex items-center gap-2"
+                    :title="sortDirection === 'asc' ? $t('ascending') : $t('descending')">
+                    <span>{{sortDirection === 'asc' ? '↑' : '↓'}}</span>
+                  </button>
+                  <button @click="clientCreate = true; clientCreateName = ''; clientExpiredDate = '';"
+                    class="console-action px-3 py-2 text-sm inline-flex items-center gap-2">
+                    <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                    <span>{{$t("new")}}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+	            <div class="px-4 md:px-5 py-3 border-b border-gray-200 dark:border-neutral-800">
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-medium text-gray-500 dark:text-neutral-400">{{$t('search')}}:</span>
+                <div style="position:relative; flex:1">
+                  <input v-model="searchQuery" type="text" class="console-input text-sm" style="width:100%"
+                    :placeholder="$t('searchPlaceholder')" />
+                  <button v-if="searchQuery" @click="searchQuery = ''"
+                    style="position:absolute; right:6px; top:50%; transform:translateY(-50%); border:none; background:transparent; cursor:pointer; padding:4px 8px"
+                    class="text-gray-400 hover:text-gray-600">×</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4 md:p-5 border-b border-gray-200 dark:border-neutral-800" v-if="clientCreate">
+	              <div class="rounded-xl border border-gray-200 dark:border-neutral-800 bg-white/80 dark:bg-neutral-950/50 p-4 space-y-4">
+	                <div class="flex flex-col lg:flex-row lg:items-end gap-4">
+	                  <div class="flex-1 space-y-2">
+	                    <div class="console-metric-label">{{$t("newClient")}}</div>
+	                    <input
+	                      class="console-input"
+	                      type="text"
+	                      v-model.trim="clientCreateName"
+	                      :placeholder="$t('name')"
+	                      @keyup.enter="createClient()" />
+	                  </div>
+	                  <div v-show="enableExpireTime" class="w-full lg:w-56 space-y-2">
+	                    <div class="console-metric-label">{{$t("ExpireDate")}}</div>
+	                    <input
+	                      class="console-input"
+	                      type="datetime-local"
+	                      v-model.trim="clientExpiredDate" />
+	                  </div>
+	                  <div class="flex flex-wrap gap-2">
+	                    <button type="button" @click="createClient()"
+	                      :disabled="clientCreating"
+	                      class="console-action px-4 py-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed">
+	                      {{ clientCreating ? $t("saving") : $t("create") }}
+	                    </button>
+	                    <button type="button" @click="clientCreate = null"
+	                      class="console-action px-4 py-2 text-sm">
+	                      {{$t("cancel")}}
+	                    </button>
+	                  </div>
+	                </div>
+	              </div>
+	            </div>
+
+	            <div class="console-client-list">
+              <div v-if="paginatedClients.length > 0" v-for="client in paginatedClients" :key="client.id"
+                class="console-client-row relative overflow-hidden">
+                <div v-if="uiChartType" :class="`absolute z-0 bottom-0 left-0 right-0 h-6 ${uiChartType === 1 && 'line-chart'}`">
+                  <apexchart width="100%" height="100%" :options="chartOptionsTX" :series="client.transferTxSeries"></apexchart>
+                </div>
+                <div v-if="uiChartType" :class="`absolute z-0 top-0 left-0 right-0 h-6 ${uiChartType === 1 && 'line-chart'}`">
+                  <apexchart width="100%" height="100%" :options="chartOptionsRX" :series="client.transferRxSeries" style="transform: scaleY(-1);"></apexchart>
+                </div>
+
+                <div class="console-client-row-inner">
+                  <div class="console-client-main">
+                    <div class="console-avatar">
+                      <svg class="w-6 h-6 m-2 text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                      </svg>
+                      <img v-if="client.avatar" :src="client.avatar" class="w-full h-full absolute inset-0 object-cover" />
+                    </div>
+
+                    <div class="console-client-copy">
+                      <div class="console-client-title group" :title="$t('createdOn') + dateTime(new Date(client.createdAt))">
+                        <input v-show="clientEditNameId === client.id" v-model="clientEditName"
+                          v-on:keyup.enter="updateClientName(client, clientEditName); clientEditName = null; clientEditNameId = null;"
+                          v-on:keyup.escape="clientEditName = null; clientEditNameId = null;"
+                          :ref="'client-' + client.id + '-name'"
+                          class="console-input max-w-xs text-sm" />
+                        <span v-show="clientEditNameId !== client.id" class="console-client-name">{{client.name}}</span>
+                        <button v-show="clientEditNameId !== client.id"
+                          @click="clientEditName = client.name; clientEditNameId = client.id; setTimeout(() => $refs['client-' + client.id + '-name'][0].select(), 1);"
+                          class="text-gray-400 hover:text-gray-700 dark:hover:text-neutral-200 transition">
+                          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <span class="console-status-badge" :class="{ 'is-online': clientIsOnline(client) }">
+                          <span class="console-status-dot"></span>
+                          <span>{{clientIsOnline(client) ? $t('onlineState') : $t('offlineState')}}</span>
+                        </span>
+                        <span class="console-status-badge" :class="client.enabled ? 'is-enabled' : 'is-disabled'">
+                          <span class="console-status-dot"></span>
+                          <span>{{client.enabled ? $t('statusOn') : $t('statusOff')}}</span>
+                        </span>
+                      </div>
+
+                      <div class="console-client-inline text-xs text-gray-500 dark:text-neutral-400">
+                        <span class="group inline-flex items-center gap-2">
+                          <input v-show="clientEditAddressId === client.id" v-model="clientEditAddress"
+                            v-on:keyup.enter="updateClientAddress(client, clientEditAddress); clientEditAddress = null; clientEditAddressId = null;"
+                            v-on:keyup.escape="clientEditAddress = null; clientEditAddressId = null;"
+                            :ref="'client-' + client.id + '-address'"
+                            class="console-input !w-28 !px-2 !py-1 text-xs" />
+                          <span v-show="clientEditAddressId !== client.id" class="console-pill">{{client.address}}</span>
+                          <button v-show="clientEditAddressId !== client.id"
+                            @click="clientEditAddress = client.address; clientEditAddressId = client.id; setTimeout(() => $refs['client-' + client.id + '-address'][0].select(), 1);"
+                            class="text-gray-400 hover:text-gray-700 dark:hover:text-neutral-200 transition">
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        </span>
+                        <span v-if="client.transferTx" class="console-pill" :title="$t('totalDownload') + bytes(client.transferTx)">
+                          ↓ {{client.transferTxCurrent | bytes}}/s
+                        </span>
+                        <span v-if="client.transferRx" class="console-pill" :title="$t('totalUpload') + bytes(client.transferRx)">
+                          ↑ {{client.transferRxCurrent | bytes}}/s
+                        </span>
+                        <span v-if="client.latestHandshakeAt" class="console-pill" :title="$t('lastSeen') + dateTime(new Date(client.latestHandshakeAt))">
+                          {{new Date(client.latestHandshakeAt) | timeago}}
+                        </span>
+                      </div>
+
+                      <div class="console-client-groups text-xs text-gray-500 dark:text-neutral-400 group">
+                        <span class="font-medium">{{$t("aclGroupsLabel")}}:</span>
+                        <input v-show="clientEditAclGroupsId === client.id" v-model="clientEditAclGroups"
+                          v-on:keyup.enter="updateClientAclGroups(client, clientEditAclGroups); clientEditAclGroups = null; clientEditAclGroupsId = null;"
+                          v-on:keyup.escape="clientEditAclGroups = null; clientEditAclGroupsId = null;"
+                          :ref="'client-' + client.id + '-acl-groups'"
+                          :placeholder="$t('aclGroupsPlaceholder')"
+                          class="console-input max-w-sm !py-1.5 text-xs" />
+                        <template v-if="clientEditAclGroupsId !== client.id">
+                          <span v-if="client.aclGroups && client.aclGroups.length" v-for="group in client.aclGroups" :key="group" class="console-group-tag">{{group}}</span>
+                          <span v-else class="console-pill">{{$t('aclGroupsEmpty')}}</span>
+                        </template>
+                        <button v-show="clientEditAclGroupsId !== client.id"
+                          @click="clientEditAclGroups = client.aclGroups ? client.aclGroups.join(', ') : ''; clientEditAclGroupsId = client.id; setTimeout(() => $refs['client-' + client.id + '-acl-groups'][0].select(), 1);"
+                          class="text-gray-400 hover:text-gray-700 dark:hover:text-neutral-200 transition">
+                          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <div class="console-client-inline text-xs text-gray-500 dark:text-neutral-400 group">
+                        <span class="font-medium">{{$t("clientUplink")}}:</span>
+                        <select v-model="client.uplinkId" @change="assignClientUplink(client)" class="console-input !py-1 !px-2 text-xs" style="max-width:130px">
+                          <option value="">{{$t("clientUplinkNone")}}</option>
+                          <option v-for="u in uplinks.filter(u => u.enabled)" :key="u.id" :value="u.id">{{u.name}}</option>
+                        </select>
+                      </div>
+
+                      <div v-show="enableExpireTime" class="console-client-inline text-xs text-gray-500 dark:text-neutral-400 group">
+                        <span class="font-medium">{{$t("ExpireDate")}}:</span>
+                        <input v-show="clientEditExpireDateId === client.id" v-model="clientEditExpireDate"
+                          v-on:keyup.enter="updateClientExpireDate(client, clientEditExpireDate); clientEditExpireDate = null; clientEditExpireDateId = null;"
+                          v-on:keyup.escape="clientEditExpireDate = null; clientEditExpireDateId = null;"
+                          :ref="'client-' + client.id + '-expire'"
+                          type="datetime-local"
+                          class="console-input max-w-xs !py-1.5 text-xs" />
+                        <span v-show="clientEditExpireDateId !== client.id" class="console-pill">{{client.expiredAt | expiredDateFormat}}</span>
+                        <button v-show="clientEditExpireDateId !== client.id"
+                          @click="startEditExpireDate(client)"
+                          class="text-gray-400 hover:text-gray-700 dark:hover:text-neutral-200 transition">
+                          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      <!-- Created date -->
+                      <div v-show="client.createdAt" class="console-client-inline text-xs text-gray-500 dark:text-neutral-400 group">
+                        <span class="font-medium">{{$t('created')}}:</span>
+                        <span class="console-pill" :title="$t('createdOn') + dateTime(new Date(client.createdAt))">
+                          {{dateTime(new Date(client.createdAt))}}
+                        </span>
+                      </div>
+                      <!-- Telegram ID -->
+                      <div class="console-client-inline text-xs text-gray-500 dark:text-neutral-400 group">
+                        <span class="font-medium">{{$t('telegramId')}}:</span>
+                        <input v-show="clientEditTelegramIdId === client.id" v-model="clientEditTelegramId"
+                          v-on:keyup.enter="updateClientTelegramId(client, clientEditTelegramId); clientEditTelegramId = null; clientEditTelegramIdId = null;"
+                          v-on:keyup.escape="clientEditTelegramId = null; clientEditTelegramIdId = null;"
+                          :ref="'client-' + client.id + '-telegram-id'"
+                          style="width:140px" class="console-input !px-2 !py-1 text-xs" />
+                        <span v-show="clientEditTelegramIdId !== client.id && client.telegramId" class="console-pill">{{client.telegramId}}</span>
+                        <span v-show="clientEditTelegramIdId !== client.id && !client.telegramId" class="italic text-gray-400 dark:text-neutral-500">{{$t('none')}}</span>
+                        <button v-show="clientEditTelegramIdId !== client.id"
+                          @click="clientEditTelegramId = client.telegramId || ''; clientEditTelegramIdId = client.id; setTimeout(() => $refs['client-' + client.id + '-telegram-id'][0].select(), 1);"
+                          class="text-gray-400 hover:text-gray-700 dark:hover:text-neutral-200 transition">
+                          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                      </div>
+                      <!-- E-mail -->
+                      <div class="console-client-inline text-xs text-gray-500 dark:text-neutral-400 group">
+                        <span class="font-medium">{{$t('email')}}:</span>
+                        <input v-show="clientEditEmailId === client.id" v-model="clientEditEmail"
+                          v-on:keyup.enter="updateClientEmail(client, clientEditEmail); clientEditEmail = null; clientEditEmailId = null;"
+                          v-on:keyup.escape="clientEditEmail = null; clientEditEmailId = null;"
+                          :ref="'client-' + client.id + '-email'"
+                          style="width:200px" class="console-input !px-2 !py-1 text-xs" />
+                        <span v-show="clientEditEmailId !== client.id && client.email" class="console-pill">{{client.email}}</span>
+                        <span v-show="clientEditEmailId !== client.id && !client.email" class="text-gray-400 dark:text-neutral-500">—</span>
+                        <button v-show="clientEditEmailId !== client.id"
+                          @click="clientEditEmail = client.email || ''; clientEditEmailId = client.id; setTimeout(() => $refs['client-' + client.id + '-email'][0].select(), 1);"
+                          class="text-gray-400 hover:text-gray-700 dark:hover:text-neutral-200 transition">
+                          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                    </div>
+
+                      <div v-if="enableOneTimeLinks && client.oneTimeLink !== null && client.oneTimeLink !== ''" :ref="'client-' + client.id + '-link'" class="console-linkline">
+                        <a :href="'./cnf/' + client.oneTimeLink">{{document.location.protocol}}//{{document.location.host}}/cnf/{{client.oneTimeLink}}</a>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="console-client-aside">
+                    <div class="console-metrics-row" v-if="uiTrafficStats">
+                      <div class="console-metric" v-if="client.transferTx">
+                        <div class="console-metric-label">{{$t('traffic.downloadRate')}}</div>
+                        <div class="console-metric-value">{{client.transferTxCurrent | bytes}}/s</div>
+                        <div class="text-xs text-gray-500 dark:text-neutral-400 mt-1">{{bytes(client.transferTx)}}</div>
+                      </div>
+                      <div class="console-metric" v-if="client.transferRx">
+                        <div class="console-metric-label">{{$t('traffic.uploadRate')}}</div>
+                        <div class="console-metric-value">{{client.transferRxCurrent | bytes}}/s</div>
+                        <div class="text-xs text-gray-500 dark:text-neutral-400 mt-1">{{bytes(client.transferRx)}}</div>
+                      </div>
+                    </div>
+
+                    <div class="console-actions-grid console-client-actions-stack">
+                      <div class="console-client-actions">
+                        <button v-if="client.enabled" @click="disableClient(client)"
+                          class="console-action console-client-action inline-flex items-center gap-2 px-4 py-2 text-sm font-medium"
+                          :title="$t('disableClient')">
+                          <span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#f87171;"></span>
+                          {{$t('disableClient')}}
+                        </button>
+                        <button v-else @click="enableClient(client)"
+                          class="console-action console-client-action inline-flex items-center gap-2 px-4 py-2 text-sm font-medium"
+                          :title="$t('enableClient')">
+                          <span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:#4ade80;"></span>
+                          {{$t('enableClient')}}
+                        </button>
+                        <button :disabled="!client.downloadableConfig"
+                          class="console-action console-client-action is-secondary"
+                          :class="{ 'opacity-40 cursor-not-allowed': !client.downloadableConfig }"
+                          :title="!client.downloadableConfig ? $t('noPrivKey') : $t('showQR')"
+                          @click="if (client.downloadableConfig) { qrcode = `./api/wireguard/client/${client.id}/qrcode.svg`; }">
+                          QR
+                        </button>
+                        <a :href="'./api/wireguard/client/' + client.id + '/configuration'"
+                          :download="client.downloadableConfig ? 'configuration' : null"
+                          class="console-action console-client-action is-secondary inline-flex items-center justify-center"
+                          :class="{ 'opacity-40 pointer-events-none': !client.downloadableConfig }"
+                          :title="!client.downloadableConfig ? $t('noPrivKey') : $t('downloadConfig')">
+                          .conf
+                        </a>
+                        <a :href="'./api/wireguard/client/' + client.id + '/vpn-config'"
+                          :download="client.downloadableConfig ? 'configuration' : null"
+                          class="console-action console-client-action is-secondary inline-flex items-center justify-center"
+                          :class="{ 'opacity-40 pointer-events-none': !client.downloadableConfig }"
+                          :title="!client.downloadableConfig ? $t('noPrivKey') : $t('amneziaVpn')">
+                          .vpn
+                        </a>
+                        <button :disabled="!client.downloadableConfig"
+                          class="console-action console-client-action is-secondary"
+                          :class="{ 'opacity-40 cursor-not-allowed': !client.downloadableConfig }"
+                          :title="!client.downloadableConfig ? $t('noPrivKey') : $t('amneziaKey')"
+                          @click="copyVpnKey(client)">
+                          {{$t("amneziaKey")}}
+                        </button>
+                        <button :disabled="!client.downloadableConfig"
+                          class="console-action console-client-action is-secondary"
+                          :class="{ 'opacity-40 cursor-not-allowed': !client.downloadableConfig }"
+                          :title="!client.downloadableConfig ? $t('noPrivKey') : $t('showConfig')"
+                          @click="if (client.downloadableConfig) { showClientConfiguration(client); }">
+                          {{$t("showConfig")}}
+                        </button>
+                      </div>
+                      <div class="console-client-actions">
+                        <button class="console-action console-client-action is-secondary"
+                          :disabled="!trafficHistoryEnabled"
+                          :class="{ 'opacity-40 cursor-not-allowed': !trafficHistoryEnabled }"
+                          :title="trafficHistoryEnabled ? $t('traffic.title') : $t('traffic.disabled')"
+                          @click="openClientTraffic(client)">
+                          {{$t("traffic.title")}}
+                        </button>
+                        <button v-if="enableOneTimeLinks" :disabled="!client.downloadableConfig"
+                          class="console-action console-client-action is-secondary"
+                          :class="{ 'opacity-40 cursor-not-allowed': !client.downloadableConfig }"
+                          :title="!client.downloadableConfig ? $t('noPrivKey') : $t('OneTimeLink')"
+                          @click="if (client.downloadableConfig) { showOneTimeLink(client); }">
+                          {{$t("OneTimeLink")}}
+                        </button>
+                        <button class="console-action console-client-action is-danger" :title="$t('deleteClient')" @click="clientDelete = client">
+                          {{$t("deleteClient")}}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="clients && clients.length > 0 && filteredClients.length === 0" class="console-empty-state console-empty">
+                <div class="text-sm">{{$t('noClientsFound')}}</div>
+              </div>
+
+              <div v-if="clients && clients.length === 0" class="console-empty-state console-empty">
+                <div class="text-sm">{{$t("noClients")}}</div>
+                <button @click="clientCreate = true; clientCreateName = ''; clientExpiredDate = '';"
+                  class="console-action mt-4 px-4 py-2 text-sm inline-flex items-center gap-2">
+                  <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  <span>{{$t("newClient")}}</span>
+                </button>
+              </div>
+
+              <div v-if="clients === null" class="p-6 text-center text-gray-500 dark:text-neutral-400">
+                <svg class="w-5 h-5 animate-spin mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+
+              <!-- Pagination -->
+              <div v-if="clients && clients.length > 0 && filteredClients.length > 0" class="flex flex-wrap items-center justify-between gap-4 px-4 py-3 border-t border-gray-200 dark:border-neutral-800 text-sm text-gray-500 dark:text-neutral-400">
+                <div>
+                  {{$t('showing')}} {{paginationInfo.start}}-{{paginationInfo.end}} {{$t('of')}} {{paginationInfo.total}} {{$t('clientsLabel')}}
+                </div>
+                <div class="flex items-center gap-3">
+                  <select v-model.number="pageSize" class="console-select text-sm" style="width:auto">
+                    <option :value="10">10</option>
+                    <option :value="25">25</option>
+                    <option :value="35">35</option>
+                    <option :value="50">50</option>
+                  </select>
+                  <button @click="goToPage(currentPageNum - 1)" :disabled="currentPageNum <= 1"
+                    class="console-action px-3 py-2 text-sm" :class="{ 'opacity-50': currentPageNum <= 1 }">← {{$t('prev')}}</button>
+                  <span class="text-sm text-gray-600 dark:text-neutral-300">{{currentPageNum}} / {{totalPages}}</span>
+                  <button @click="goToPage(currentPageNum + 1)" :disabled="currentPageNum >= totalPages"
+                    class="console-action px-3 py-2 text-sm" :class="{ 'opacity-50': currentPageNum >= totalPages }">{{$t('next')}} →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+          <div class="console-panel overflow-hidden mt-6">
+            <div class="console-panel-header">
+              <div class="console-toolbar">
+                <div class="min-w-0 flex-1">
+                  <div class="console-section-title">{{$t("routingCategoriesTitle")}}</div>
+                  <div class="console-section-note mt-1 max-w-3xl">{{$t("routingCategoriesHint")}}</div>
+                </div>
+                <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+                  <button @click="addRoutingCategory"
+                    class="console-action px-4 py-2 text-sm sm:min-w-[160px]">
+                    {{$t("addRoutingCategory")}}
+                  </button>
+                  <button @click="saveRoutingCategories" :disabled="routingCategoriesSaving"
+                    class="console-action px-4 py-2 text-sm disabled:opacity-50 sm:min-w-[190px]">
+                    {{ routingCategoriesSaving ? $t("saving") : $t("saveRoutingCategories") }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="p-4 md:p-5 space-y-5">
+              <div v-if="routingCategories.length === 0" class="rounded-2xl border border-dashed border-gray-300 dark:border-neutral-700 bg-gray-50/80 dark:bg-neutral-900/60 px-4 py-5 text-sm text-gray-600 dark:text-neutral-300">
+                {{$t("routingCategoriesEmptyState")}}
+              </div>
+              <div v-for="(category, index) in routingCategories" :key="category.id" class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+                  <div class="space-y-2 min-w-0">
+                    <div class="console-metric-label">{{$t("routingCategoryName")}}</div>
+                    <input v-model.trim="category.name" type="text" :placeholder="`${$t('routingCategoryName')} ${index + 1}`" class="console-input text-sm xl:max-w-xl" />
+                  </div>
+                  <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap xl:justify-end">
+                    <label class="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-neutral-700 px-3 py-2 text-sm text-gray-700 dark:text-neutral-200">
+                      <input v-model="category.enabled" type="checkbox" class="rounded border-gray-300 text-red-700 focus:ring-red-700">
+                      <span>{{$t("routingCategoryEnabled")}}</span>
+                    </label>
+                    <button @click="removeRoutingCategory(category.id)"
+                      class="console-action is-danger px-4 py-2 text-sm sm:min-w-[120px]">
+                      {{$t("remove")}}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(260px,360px)_minmax(0,1fr)]">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("routingCategoryUplink")}}</div>
+                    <select v-model="category.uplinkId" class="console-input text-sm">
+                      <option value="">{{$t("routingCategoryUplinkPlaceholder")}}</option>
+                      <option v-for="uplink in uplinks.filter((item) => item.enabled)" :key="`routing-category-${category.id}-${uplink.id}`" :value="uplink.id">
+                        {{uplink.name}}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("routingCategoryDomains")}}</div>
+                    <textarea v-model="category.domainsText" rows="5" :placeholder="$t('routingCategoryDomainsPlaceholder')" class="console-input text-sm"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-show="currentPage === 'acl'" class="console-page console-acl-shell">
+          <div class="console-acl-hero overflow-hidden">
+            <div class="console-acl-hero-grid">
+              <div class="console-acl-copy">
+                <div class="console-subtitle">{{$t("clientIsolationEyebrow")}}</div>
+                <h2 class="text-3xl md:text-4xl font-semibold text-gray-900 dark:text-neutral-100 leading-tight">{{$t("clientIsolationTitle")}}</h2>
+                <p class="console-acl-lead">{{$t("aclSubtitle")}}</p>
+                <p class="console-acl-detail">{{$t("clientIsolationDescription")}}</p>
+              </div>
+              <div class="console-acl-settings">
+                <div>
+                  <div class="console-acl-settings-title">{{$t("aclSettingsTitle")}}</div>
+                  <p class="console-acl-settings-note mt-2">{{$t("clientIsolationHint")}}</p>
+                </div>
+                <label class="console-acl-toggle">
+                  <input v-model="clientIsolation.enabled" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                  <span class="console-acl-toggle-copy">
+                    <span class="console-acl-toggle-label">{{$t("clientIsolationEnabled")}}</span>
+                    <span class="console-acl-toggle-hint">{{$t("aclToggleHint")}}</span>
+                  </span>
+                </label>
+                <button @click="saveClientIsolation" :disabled="clientIsolationSaving"
+                  class="console-action console-acl-save px-5 py-3 text-sm font-medium disabled:opacity-50">
+                  {{ clientIsolationSaving ? $t("saving") : $t("saveIsolation") }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="console-summary-grid">
+            <div v-for="card in aclSummaryCards" :key="card.label" class="console-summary-card p-4">
+              <div class="console-metric-label">{{card.label}}</div>
+              <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-neutral-100">{{card.value}}</div>
+            </div>
+          </div>
+
+          <div class="console-panel overflow-hidden">
+            <div class="console-panel-header">
+              <div class="console-toolbar">
+                <div>
+                  <div class="console-section-title">{{$t("aclRulesTitle")}}</div>
+                  <div class="console-section-note mt-1">{{$t("clientIsolationHint")}}</div>
+                </div>
+                <button @click="createIsolationRule" :disabled="!clients || clients.length < 2"
+                  class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                  {{$t("addIsolationRule")}}
+                </button>
+              </div>
+            </div>
+
+            <div class="p-4 md:p-5 space-y-3">
+              <div v-if="clientIsolation.rules.length === 0" class="console-empty p-8 text-center text-sm">
+                {{$t("aclEmptyState")}}
+              </div>
+
+              <div class="console-rule-list">
+                <div
+                  v-for="(rule, index) in clientIsolation.rules"
+                  :key="rule.id"
+                  class="console-rule-row"
+                  :class="{
+                    'is-dragging': aclDraggingRuleId === rule.id,
+                    'is-drop-target': aclDragOverRuleId === rule.id && aclDraggingRuleId !== rule.id,
+                  }"
+                  @dragover.prevent="setAclDragOver(rule.id)"
+                  @dragenter.prevent="setAclDragOver(rule.id)"
+                  @drop.prevent="dropAclRule(rule.id)"
+                >
+                  <div class="console-rule-topbar">
+                    <div class="console-rule-order">
+                      <div
+                        class="console-rule-handle"
+                        draggable="true"
+                        @dragstart="startAclRuleDrag(rule.id)"
+                        @dragend="endAclRuleDrag"
+                        :title="$t('dragToReorder')"
+                      >⋮⋮</div>
+                      <div class="console-rule-index">#{{index + 1}}</div>
+                      <div class="console-rule-top-note">{{$t("dragToReorder")}}</div>
+                    </div>
+
+                    <div class="console-rule-flags">
+                      <label class="console-rule-toggle">
+                        <input v-model="rule.bidirectional" type="checkbox" class="rounded border-gray-300 text-red-700 focus:ring-red-700">
+                        <span>{{$t("bidirectionalShort")}}</span>
+                      </label>
+
+                      <label class="console-rule-toggle">
+                        <input v-model="rule.enabled" type="checkbox" class="rounded border-gray-300 text-red-700 focus:ring-red-700">
+                        <span>{{$t("enabledShort")}}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="console-rule-main">
+                    <div class="console-rule-action">
+                      <div class="console-rule-block-title">{{$t("aclHeaderAction")}}</div>
+                      <select v-model="rule.action" class="console-select text-sm !py-2">
+                        <option v-for="option in aclActionOptions" :key="option.value" :value="option.value">{{option.label}}</option>
+                      </select>
+                    </div>
+
+                    <div class="console-rule-block">
+                      <div class="console-rule-block-title">{{$t("aclHeaderSource")}}</div>
+                      <div class="console-rule-selector">
+                        <select v-model="rule.sourceType" @change="normalizeIsolationRule(rule)" class="console-select text-sm !py-2">
+                          <option v-for="option in aclSelectorTypeOptions" :key="option.value" :value="option.value">{{option.label}}</option>
+                        </select>
+                        <select
+                          v-if="aclSelectorUsesPreset(rule.sourceType)"
+                          v-model="rule.sourceValue"
+                          class="console-select text-sm !py-2"
+                          :disabled="getAclSelectorValueOptions(rule.sourceType).length === 0"
+                        >
+                          <option v-if="getAclSelectorValueOptions(rule.sourceType).length === 0" disabled value="">{{$t('aclNoSelectorValues')}}</option>
+                          <option v-for="option in getAclSelectorValueOptions(rule.sourceType)" :key="option.value" :value="option.value">{{option.label}}</option>
+                        </select>
+                        <input v-else-if="aclSelectorRequiresFreeform(rule.sourceType)" v-model="rule.sourceValue" type="text" :placeholder="$t('aclCidrPlaceholder')" class="console-input text-sm !py-2" />
+                        <div v-else class="console-pill justify-center px-3 py-2 text-sm">{{$t('aclSelectorAllValue')}}</div>
+                      </div>
+                    </div>
+
+                    <div class="console-rule-block">
+                      <div class="console-rule-block-title">{{$t("aclHeaderTarget")}}</div>
+                      <div class="console-rule-selector">
+                        <select v-model="rule.targetType" @change="normalizeIsolationRule(rule)" class="console-select text-sm !py-2">
+                          <option v-for="option in aclSelectorTypeOptions" :key="option.value" :value="option.value">{{option.label}}</option>
+                        </select>
+                        <select
+                          v-if="aclSelectorUsesPreset(rule.targetType)"
+                          v-model="rule.targetValue"
+                          class="console-select text-sm !py-2"
+                          :disabled="getAclSelectorValueOptions(rule.targetType).length === 0"
+                        >
+                          <option v-if="getAclSelectorValueOptions(rule.targetType).length === 0" disabled value="">{{$t('aclNoSelectorValues')}}</option>
+                          <option v-for="option in getAclSelectorValueOptions(rule.targetType)" :key="option.value" :value="option.value">{{option.label}}</option>
+                        </select>
+                        <input v-else-if="aclSelectorRequiresFreeform(rule.targetType)" v-model="rule.targetValue" type="text" :placeholder="$t('aclCidrPlaceholder')" class="console-input text-sm !py-2" />
+                        <div v-else class="console-pill justify-center px-3 py-2 text-sm">{{$t('aclSelectorAllValue')}}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="console-rule-footer">
+                    <div class="console-rule-meta-left"></div>
+
+                    <div class="console-rule-meta-right">
+                      <button @click="removeIsolationRule(rule.id)" class="console-action console-rule-remove is-danger px-3 py-2 text-sm">
+                        {{$t("remove")}}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-show="currentPage === 'uplink'" class="console-page">
+          <div class="console-acl-hero overflow-hidden">
+            <div class="console-acl-hero-grid">
+              <div class="console-acl-copy">
+                <div class="console-subtitle">{{$t("uplinkEyebrow")}}</div>
+                <h2 class="text-3xl md:text-4xl font-semibold text-gray-900 dark:text-neutral-100 leading-tight">{{$t("uplinkTitle")}}</h2>
+                <p class="console-acl-lead">{{$t("uplinkDescription")}}</p>
+                <p class="console-acl-detail">{{$t("uplinkSourcesHint")}}</p>
+              </div>
+              <div class="console-acl-settings">
+                <div>
+                  <div class="console-acl-settings-title">{{$t("uplinkNav")}}</div>
+                  <p class="console-acl-settings-note mt-2">{{$t("uplinkMultiHint")}}</p>
+                </div>
+                <div class="console-uplink-dns-card">
+                  <div>
+                    <div class="console-acl-settings-title">{{$t("dnsRoutingNav")}}</div>
+                    <p class="console-acl-settings-note mt-2">{{$t("dnsRoutingHint")}}</p>
+                  </div>
+                  <label class="console-acl-toggle">
+                    <input v-model="dnsRouting.enabled" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                    <span class="console-acl-toggle-copy">
+                      <span class="console-acl-toggle-label">{{$t("dnsRoutingEnabled")}}</span>
+                      <span class="console-acl-toggle-hint">{{$t("dnsRoutingClientsHint")}}</span>
+                    </span>
+                  </label>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("dnsRoutingListenAddress")}}</div>
+                    <div class="console-uplink-dns-address rounded-lg px-3 py-2 text-sm">{{dnsRouting.listenAddress || 'n/a'}}</div>
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("dnsRoutingUpstreams")}}</div>
+                    <textarea v-model="dnsRouting.upstreamsText" rows="4" :placeholder="$t('dnsRoutingUpstreamsPlaceholder')" class="console-input text-sm"></textarea>
+                  </div>
+                  <button @click="saveDnsRoutingSettings" :disabled="dnsRoutingSaving"
+                    class="console-action w-full px-5 py-3 text-sm font-medium disabled:opacity-50">
+                    {{ dnsRoutingSaving ? $t("saving") : $t("saveDnsRouting") }}
+                  </button>
+                  <!-- DNS Pre-resolve section -->
+                  <div class="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                    <div class="console-acl-settings-title text-sm mb-2">{{$t("dnsResolveEnabled")}}</div>
+                    <p class="console-acl-settings-note mb-3">{{$t("dnsResolveHint")}}</p>
+                    <!-- Resolve progress -->
+                    <div v-if="dnsResolveStatus.running" class="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2 mb-3">
+                      <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-red-600 h-2 rounded-full transition-all" :style="{width: dnsResolveStatus.total > 0 ? Math.round(100 * dnsResolveStatus.processed / dnsResolveStatus.total) + '%' : '0%'}"></div>
+                      </div>
+                      <div class="text-xs text-gray-600">{{$t("dnsResolveProgress", { n: dnsResolveStatus.processed, N: dnsResolveStatus.total })}}</div>
+                      <div v-if="dnsResolveStatus.eta" class="text-xs text-gray-500">{{$t("dnsResolveEta", { eta: dnsResolveStatus.eta })}}</div>
+                      <div class="text-xs text-red-600 font-medium">{{$t("dnsResolveWarning")}}</div>
+                    </div>
+                    <!-- Resolve done -->
+                    <div v-if="!dnsResolveStatus.running && dnsResolveStatus.lastResolved" class="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 mb-3 space-y-1">
+                      <div><span class="font-medium">{{$t("dnsResolveDone", { N: dnsResolveStatus.total, e: dnsResolveStatus.errors })}}</span></div>
+                      <div class="text-xs text-green-600">{{$t("dnsResolveCachedAt")}}: {{dnsResolveStatus.lastResolved}}</div>
+                    </div>
+                    <!-- Never resolved -->
+                    <div v-if="!dnsResolveStatus.running && !dnsResolveStatus.lastResolved" class="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-500 mb-3">
+                      {{$t("dnsResolveNever")}}
+                    </div>
+                    <div class="flex gap-3">
+                      <label class="console-acl-toggle flex-1">
+                        <input v-model="dnsRouting.resolveEnabled" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                        <span class="console-acl-toggle-copy">
+                          <span class="console-acl-toggle-label">{{$t("dnsResolveAutoLabel")}}</span>
+                          <span class="console-acl-toggle-hint">{{$t("dnsResolveAutoHint")}}</span>
+                        </span>
+                      </label>
+                      <button @click="startDnsResolve" :disabled="dnsResolveStatus.running"
+                        class="console-action px-4 py-2 text-sm font-medium disabled:opacity-50 whitespace-nowrap">
+                        {{ dnsResolveStatus.running ? $t("saving") : $t("startResolve") }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <button @click="addUplink"
+                  class="console-action px-5 py-3 text-sm font-medium">
+                  {{$t("addUplink")}}
+                </button>
+                <label class="console-action px-5 py-3 text-sm font-medium cursor-pointer text-center">
+                  <input type="file" accept=".conf,.txt" class="hidden" @change="uploadUplinkConfig">
+                  {{ uplinkConfigUploading ? $t("saving") : $t("uploadUplinkConfig") }}
+                </label>
+                <button @click="saveUplinkSettings" :disabled="uplinkSaving"
+                  class="console-action px-5 py-3 text-sm font-medium disabled:opacity-50">
+                  {{ uplinkSaving ? $t("saving") : $t("saveUplink") }}
+                </button>
+                <div v-if="uplinkSaveStatusLabel" class="console-section-note">
+                  {{ uplinkSaveStatusLabel }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="console-summary-grid">
+            <div v-for="card in uplinkSummaryCards" :key="card.label" class="console-summary-card p-4">
+              <div class="console-metric-label">{{card.label}}</div>
+              <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-neutral-100">{{card.value}}</div>
+            </div>
+          </div>
+
+          <div class="console-panel overflow-hidden">
+            <div class="console-panel-header">
+              <div class="console-toolbar">
+                <div>
+                  <div class="console-section-title">{{$t("uplinkTitle")}}</div>
+                  <div class="console-section-note mt-1">{{$t("uplinkMultiHint")}}</div>
+                </div>
+                <button @click="addUplink"
+                  class="console-action px-4 py-2 text-sm">
+                  {{$t("addUplink")}}
+                </button>
+                <label class="console-action px-4 py-2 text-sm cursor-pointer text-center">
+                  <input type="file" accept=".conf,.txt" class="hidden" @change="uploadUplinkConfig">
+                  {{ uplinkConfigUploading ? $t("saving") : $t("uploadUplinkConfig") }}
+                </label>
+                <button @click="saveUplinkSettings" :disabled="uplinkSaving"
+                  class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                  {{ uplinkSaving ? $t("saving") : $t("saveUplink") }}
+                </button>
+                <div v-if="uplinkSaveStatusLabel" class="console-section-note">
+                  {{ uplinkSaveStatusLabel }}
+                </div>
+              </div>
+            </div>
+
+            <div class="p-4 md:p-5 space-y-5">
+              <div class="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+                {{$t("uplinkOrderHint")}}
+              </div>
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div>
+                  <div class="console-section-title">{{$t("uplinkImportTitle")}}</div>
+                  <div class="console-section-note mt-1">{{$t("uplinkImportHint")}}</div>
+                </div>
+                <div class="grid gap-4 xl:grid-cols-[minmax(0,280px)_minmax(0,1fr)_auto] xl:items-end">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("uplinkImportFilename")}}</div>
+                    <input
+                      v-model.trim="uplinkConfigImportFilename"
+                      type="text"
+                      :placeholder="$t('uplinkImportFilenamePlaceholder')"
+                      class="console-input text-sm"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("uplinkImportContent")}}</div>
+                    <textarea
+                      v-model="uplinkConfigImportContent"
+                      rows="6"
+                      :placeholder="$t('uplinkImportContentPlaceholder')"
+                      class="console-input text-sm"
+                    ></textarea>
+                  </div>
+                  <button
+                    @click="savePastedUplinkConfig"
+                    :disabled="uplinkConfigImportSaving"
+                    class="console-action px-4 py-3 text-sm disabled:opacity-50"
+                  >
+                    {{ uplinkConfigImportSaving ? $t("saving") : $t("savePastedUplinkConfig") }}
+                  </button>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-3">
+                <div class="console-section-title">{{$t("uplinkProtectedCidrs")}}</div>
+                <div class="console-section-note">{{$t("uplinkProtectedCidrsHint")}}</div>
+                <textarea v-model="uplinkProtectedCidrsText" rows="4" :placeholder="$t('uplinkProtectedCidrsPlaceholder')" class="console-input text-sm"></textarea>
+                <div class="flex items-center gap-3">
+                  <button @click="saveUplinkProtectedCidrs" :disabled="uplinkProtectedCidrsSaving"
+                    class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                    {{ uplinkProtectedCidrsSaving ? $t("saving") : $t("saveProtectedCidrs") }}
+                  </button>
+                  <button @click="loadGeoIpToProtected" :disabled="geoIpProtectedLoading"
+                    class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                    {{ geoIpProtectedLoading ? $t("geoSiteLoading") : $t("geoIpProtectedLoadBtn") }}
+                  </button>
+                </div>
+              </div>
+              <div v-if="uplinks.length === 0" class="rounded-2xl border border-dashed border-gray-300 dark:border-neutral-700 bg-gray-50/80 dark:bg-neutral-900/60 px-4 py-5 text-sm text-gray-600 dark:text-neutral-300">
+                {{$t("uplinkEmptyState")}}
+              </div>
+              <div v-for="(uplink, index) in uplinks" :key="uplink.id" class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-5">
+                <div class="flex flex-col xl:flex-row gap-3 xl:items-start xl:justify-between">
+                  <div class="space-y-2 flex-1">
+                    <div class="inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium uppercase tracking-wide text-gray-600 dark:bg-neutral-800 dark:text-neutral-300">
+                      <span>{{$t("uplinkPriority")}}</span>
+                      <span>#{{index + 1}}</span>
+                    </div>
+                    <div class="console-metric-label">{{$t("uplinkItemName")}}</div>
+                    <input v-model.trim="uplink.name" type="text" :placeholder="`${$t('uplinkItemName')} ${index + 1}`" class="console-input text-sm max-w-md" />
+                    <div class="console-section-note">{{$t("uplinkItemNameHint")}}</div>
+                  </div>
+                  <div class="flex flex-wrap gap-2 xl:justify-end">
+                    <label class="inline-flex items-center gap-2 rounded-full border border-gray-200 dark:border-neutral-700 px-3 py-2 text-sm text-gray-700 dark:text-neutral-200">
+                      <input v-model="uplink.enabled" type="checkbox" class="rounded border-gray-300 text-red-700 focus:ring-red-700">
+                      <span>{{$t("uplinkEnabled")}}</span>
+                    </label>
+                    <button @click="moveUplink(uplink.id, 'up')" :disabled="index === 0"
+                      class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                      {{$t("moveUp")}}
+                    </button>
+                    <button @click="moveUplink(uplink.id, 'down')" :disabled="index === uplinks.length - 1"
+                      class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                      {{$t("moveDown")}}
+                    </button>
+                    <button @click="testUplinkConnection(uplink.id)" :disabled="uplinkTestingId !== null"
+                      class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                      {{ uplinkTestingId === uplink.id ? $t("saving") : $t("testUplink") }}
+                    </button>
+                    <button @click="removeUplink(uplink.id)"
+                      class="console-action is-danger px-4 py-2 text-sm">
+                      {{$t("remove")}}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("uplinkConfigPath")}}</div>
+                    <select v-if="uplinkConfigOptions.length > 0" v-model="uplink.configPath" @change="syncUplinkInterfaceFromConfig(uplink)" class="console-input text-sm">
+                      <option value="">{{$t("uplinkConfigSelectPlaceholder")}}</option>
+                      <option v-for="option in uplinkConfigOptions" :key="option.path" :value="option.path">
+                        {{option.name}}
+                      </option>
+                    </select>
+                    <input v-model.trim="uplink.configPath" type="text" :placeholder="$t('uplinkConfigPlaceholder')" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("uplinkInterface")}}</div>
+                    <input v-model.trim="uplink.interfaceName" type="text" :placeholder="$t('uplinkInterfacePlaceholder')" class="console-input text-sm" />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("uplinkTable")}}</div>
+                    <input v-model.number="uplink.table" type="number" min="1" :placeholder="$t('uplinkTablePlaceholder')" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("uplinkClientsHint")}}</div>
+                    <div class="flex flex-wrap gap-2">
+                      <button v-for="client in clients || []" :key="`uplink-${uplink.id}-${client.id}`" @click="appendUplinkSourceRule(uplink.id, client.address)"
+                        class="console-action px-3 py-2 text-xs">
+                        {{client.name}} ({{client.address}}/32)
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <div class="console-metric-label">{{$t("uplinkSources")}}</div>
+                  <textarea v-model="uplink.sourceRulesText" rows="8" :placeholder="$t('uplinkSourcePlaceholder')" class="console-input text-sm"></textarea>
+                  <div class="console-section-note">{{$t("uplinkSourcesHint")}}</div>
+                </div>
+
+                <div class="space-y-2">
+                  <div class="console-metric-label">{{$t("uplinkDomains")}}</div>
+                  <textarea v-model="uplink.destinationDomainsText" rows="6" :placeholder="$t('uplinkDomainPlaceholder')" class="console-input text-sm"></textarea>
+                  <div class="console-section-note">{{$t("uplinkDomainsHint")}}</div>
+                  <div class="flex items-center gap-3 mt-2">
+                    <button @click="loadGeoSite" :disabled="geoSiteLoading"
+                      class="console-action px-4 py-2 text-sm font-medium disabled:opacity-50">
+                      {{ geoSiteLoading ? $t("geoSiteLoading") : $t("geoSiteLoadBtn") }}
+                    </button>
+                    <label class="console-acl-toggle">
+                      <input v-model="uplink.geoSiteSync" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                      <span class="console-acl-toggle-copy">
+                        <span class="console-acl-toggle-label">{{$t("geoSiteSyncLabel")}}</span>
+                        <span class="console-acl-toggle-hint">{{$t("geoSiteSyncHint")}}</span>
+                      </span>
+                    </label>
+                  </div>
+                  <div v-if="geoSiteResult" class="rounded-lg border border-green-200 bg-green-50 p-2 text-xs text-green-700 mt-2">
+                    {{$t("geoSiteLoaded", { N: geoSiteResult.totalDomains, M: geoSiteResult.totalFiles })}}
+                  </div>
+                  <!-- GeoIP block -->
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("uplinkIps")}}</div>
+                    <textarea v-model="uplink.destinationIpsText" rows="6" :placeholder="$t('uplinkIpsHint')" class="console-input text-sm"></textarea>
+                    <div class="console-section-note">{{$t("uplinkIpsHint")}}</div>
+                    <div class="flex items-center gap-3 mt-2">
+                      <button @click="loadGeoIp" :disabled="geoIpLoading"
+                        class="console-action px-4 py-2 text-sm font-medium disabled:opacity-50">
+                        {{ geoIpLoading ? $t("geoSiteLoading") : $t("geoIpLoadBtn") }}
+                      </button>
+                      <label class="console-acl-toggle">
+                        <input v-model="uplink.geoIpSync" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                        <span class="console-acl-toggle-copy">
+                          <span class="console-acl-toggle-label">{{$t("geoIpSyncLabel")}}</span>
+                          <span class="console-acl-toggle-hint">{{$t("geoIpSyncHint")}}</span>
+                        </span>
+                      </label>
+                    </div>
+                    <div v-if="geoIpResult" class="rounded-lg border border-green-200 bg-green-50 p-2 text-xs text-green-700 mt-2">
+                      {{$t("geoIpLoaded", { N: geoIpResult })}}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-show="currentPage === 'dns-logs'" class="console-page">
+          <div class="console-summary-grid">
+            <div class="console-summary-card p-4">
+              <div class="console-metric-label">{{$t("dnsRoutingEnabled")}}</div>
+              <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-neutral-100">{{dnsLogs.enabled ? $t("statusOn") : $t("statusOff")}}</div>
+            </div>
+            <div class="console-summary-card p-4">
+              <div class="console-metric-label">{{$t("dnsLogsUpdatedAt")}}</div>
+              <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-neutral-100">{{dnsLogs.updatedAt ? dateTime(new Date(dnsLogs.updatedAt)) : 'n/a'}}</div>
+            </div>
+            <div class="console-summary-card p-4">
+              <div class="console-metric-label">{{$t("dnsLogsLines")}}</div>
+              <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-neutral-100">{{dnsLogs.lines.length}}</div>
+            </div>
+          </div>
+
+          <div class="console-panel overflow-hidden">
+            <div class="console-panel-header">
+              <div class="console-toolbar">
+                <div>
+                  <div class="console-section-title">{{$t("dnsLogsTitle")}}</div>
+                  <div class="console-section-note mt-1">{{$t("dnsLogsHint")}}</div>
+                </div>
+                <button @click="refreshDnsLogs()" :disabled="dnsLogsLoading"
+                  class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                  {{ dnsLogsLoading ? $t("saving") : $t("refresh") }}
+                </button>
+              </div>
+            </div>
+            <div class="p-4 md:p-5 space-y-4">
+              <div class="space-y-2">
+                <div class="console-metric-label">{{$t("dnsLogsPath")}}</div>
+                <div class="console-uplink-dns-address rounded-lg px-3 py-2 text-sm">{{dnsLogs.logPath || 'n/a'}}</div>
+              </div>
+              <div v-if="dnsLogs.lines.length === 0" class="rounded-2xl border border-dashed border-gray-300 dark:border-neutral-700 bg-gray-50/80 dark:bg-neutral-900/60 px-4 py-5 text-sm text-gray-600 dark:text-neutral-300">
+                {{$t("dnsLogsEmptyState")}}
+              </div>
+              <pre v-else class="console-log-view rounded-xl p-4">{{dnsLogs.lines.join('\n')}}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- QR Code-->
+        <div v-if="qrcode">
+          <div class="bg-black bg-opacity-50 fixed top-0 right-0 left-0 bottom-0 flex items-center justify-center z-50">
+            <div class="bg-white rounded-md shadow-lg relative p-8">
+              <button @click="qrcode = null"
+                class="absolute right-4 top-4 text-gray-600 dark:text-neutral-500 hover:text-gray-800 dark:hover:text-neutral-700">
+                <svg class="w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <img :src="qrcode" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Config Text -->
+        <div v-if="configText !== null">
+          <div class="bg-black bg-opacity-50 fixed top-0 right-0 left-0 bottom-0 p-2 sm:p-4 flex items-center justify-center z-50">
+            <div class="bg-white dark:bg-neutral-700 rounded-md shadow-lg relative p-4 sm:p-6 w-full overflow-hidden"
+              style="max-width: 72rem; height: 88vh; display: flex; flex-direction: column;">
+              <button @click="closeClientConfiguration"
+                class="absolute right-4 top-4 text-gray-600 dark:text-neutral-500 hover:text-gray-800 dark:hover:text-neutral-300">
+                <svg class="w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-neutral-200 pr-12 mb-3">
+                {{$t('showConfig')}}<span v-if="configClientName">: {{ configClientName }}</span>
+              </h3>
+              <pre
+                class="w-full m-0 p-3 border-2 border-gray-100 dark:border-neutral-600 rounded bg-gray-50 dark:bg-neutral-800 text-gray-900 dark:text-neutral-200 font-mono text-sm leading-6 outline-none overflow-y-auto overflow-x-hidden"
+                style="flex: 1 1 auto; min-height: 0; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word;"
+                v-html="highlightedConfigText"></pre>
+              <div class="mt-3 flex justify-end">
+                <button @click="copyClientConfiguration"
+                  class="align-middle inline-block bg-gray-100 dark:bg-neutral-600 dark:text-neutral-300 px-4 py-2 rounded transition hover:bg-red-800 dark:hover:bg-red-800 hover:text-white dark:hover:text-white">
+                  {{$t('copyConfig')}}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Traffic Stats -->
+        <div v-if="trafficClient !== null">
+          <div class="fixed inset-0 z-50 p-2 sm:p-4 flex items-center justify-center traffic-modal-backdrop">
+            <div class="traffic-modal-shell rounded-2xl shadow-2xl relative w-full overflow-hidden"
+              style="max-width: 76rem; height: 88vh; display: flex; flex-direction: column;">
+              <button @click="closeClientTraffic"
+                class="absolute right-4 top-4 z-10 text-gray-600 dark:text-neutral-500 hover:text-gray-800 dark:hover:text-neutral-300">
+                <svg class="w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                  stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <div class="traffic-modal-header px-5 sm:px-7 pt-5 sm:pt-7 pb-5">
+                <div class="pr-12">
+                  <div class="flex flex-wrap items-center gap-2 mb-3">
+                    <span class="inline-flex items-center rounded-full bg-white/70 dark:bg-black/20 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-slate-600 dark:text-slate-200">
+                      {{$t('traffic.title')}}
+                    </span>
+                    <span v-if="trafficHistory" class="inline-flex items-center rounded-full bg-slate-900/5 dark:bg-white/10 px-3 py-1 text-xs text-slate-600 dark:text-slate-300">
+                      {{trafficResolutionLabel}}
+                    </span>
+                    <span v-if="trafficHistory" class="inline-flex items-center rounded-full bg-slate-900/5 dark:bg-white/10 px-3 py-1 text-xs text-slate-600 dark:text-slate-300">
+                      {{trafficSummaryHint}}
+                    </span>
+                  </div>
+                  <h3 class="text-2xl sm:text-3xl leading-tight font-semibold text-slate-950 dark:text-white">
+                    {{ trafficClient.name }}
+                  </h3>
+                  <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 mt-2 max-w-3xl">
+                    {{trafficRangeLabel}}
+                  </p>
+                </div>
+              </div>
+
+              <div class="px-5 sm:px-7 pb-5 sm:pb-6 overflow-hidden flex-1 flex flex-col">
+              <div class="traffic-period-tabs inline-flex flex-wrap gap-2 self-start p-1 rounded-2xl mb-5">
+                <button v-for="period in ['day', 'week', 'month']" :key="period"
+                  @click="loadClientTraffic(period)"
+                  class="px-4 py-2 rounded-xl text-sm font-medium transition"
+                  :class="trafficHistoryPeriod === period
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-white/10'">
+                  {{formatTrafficPeriodLabel(period)}}
+                </button>
+              </div>
+
+              <div v-if="trafficHistoryLoading" class="flex-1 flex items-center justify-center text-gray-500 dark:text-neutral-400">
+                <svg class="w-5 animate-spin mr-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                  fill="currentColor">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z">
+                  </path>
+                </svg>
+                {{$t('traffic.loading')}}
+              </div>
+
+              <div v-else-if="trafficHistoryError" class="flex-1 flex items-center justify-center">
+                <div class="rounded-2xl border border-red-200 dark:border-red-900/70 bg-red-50 dark:bg-red-950/30 px-5 py-4">
+                  <p class="text-sm text-red-700 dark:text-red-300">{{trafficHistoryError}}</p>
+                </div>
+              </div>
+
+              <div v-else-if="trafficHistory" class="flex-1 overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-5">
+                  <div v-for="card in trafficHistorySummaryCards" :key="card.label"
+                    class="traffic-stat-card rounded-2xl p-4 sm:p-5"
+                    :class="`traffic-stat-card--${card.tone}`">
+                    <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">{{card.label}}</div>
+                    <div class="mt-3 text-xl sm:text-2xl font-semibold text-slate-950 dark:text-white">{{card.value}}</div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-5">
+                  <div class="traffic-chart-card rounded-2xl p-4 sm:p-5">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                      <div class="text-sm font-medium text-slate-900 dark:text-white">{{$t('traffic.downloadRate')}}</div>
+                      <div class="text-xs text-slate-500 dark:text-slate-400">{{trafficResolutionLabel}}</div>
+                    </div>
+                    <apexchart height="240" :options="trafficRxChartOptions" :series="trafficRxChartSeries"></apexchart>
+                  </div>
+                  <div class="traffic-chart-card rounded-2xl p-4 sm:p-5">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                      <div class="text-sm font-medium text-slate-900 dark:text-white">{{$t('traffic.uploadRate')}}</div>
+                      <div class="text-xs text-slate-500 dark:text-slate-400">{{trafficResolutionLabel}}</div>
+                    </div>
+                    <apexchart height="240" :options="trafficTxChartOptions" :series="trafficTxChartSeries"></apexchart>
+                  </div>
+                </div>
+
+                <div class="traffic-live-panel rounded-2xl p-4 sm:p-5">
+                  <div class="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <div class="text-sm font-medium text-slate-900 dark:text-white">{{$t('traffic.liveSnapshot')}}</div>
+                      <div class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{$t('traffic.liveDescription')}}</div>
+                    </div>
+                    <div v-if="trafficHistory.live" class="text-xs text-slate-500 dark:text-slate-400">
+                      {{dateTime(trafficHistory.live.sampledAt)}}
+                    </div>
+                  </div>
+                  <div v-if="trafficHistory.live" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+                    <div v-for="stat in trafficLiveStats" :key="stat.label"
+                      class="rounded-xl border border-slate-200/80 dark:border-white/10 bg-white/75 dark:bg-white/5 px-4 py-3">
+                      <div class="text-[11px] uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">{{stat.label}}</div>
+                      <div class="mt-2 text-base font-semibold text-slate-950 dark:text-white">{{stat.value}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Dialog -->
+        <div v-if="clientDelete" class="fixed z-50 inset-0 overflow-y-auto">
+          <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <!--
+        Background overlay, show/hide based on modal state.
+
+        Entering: "ease-out duration-300"
+          From: "opacity-0"
+          To: "opacity-100"
+        Leaving: "ease-in duration-200"
+          From: "opacity-100"
+          To: "opacity-0"
+      -->
+            <div class="fixed inset-0 transition-opacity" aria-hidden="true">
+              <div class="absolute inset-0 bg-gray-500 dark:bg-black opacity-75 dark:opacity-50"></div>
+            </div>
+
+            <!-- This element is to trick the browser into centering the modal contents. -->
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <!--
+        Modal panel, show/hide based on modal state.
+
+        Entering: "ease-out duration-300"
+          From: "opacity-0 tranneutral-y-4 sm:tranneutral-y-0 sm:scale-95"
+          To: "opacity-100 tranneutral-y-0 sm:scale-100"
+        Leaving: "ease-in duration-200"
+          From: "opacity-100 tranneutral-y-0 sm:scale-100"
+          To: "opacity-0 tranneutral-y-4 sm:tranneutral-y-0 sm:scale-95"
+      -->
+            <div
+              class="console-login-card inline-block align-bottom text-left overflow-hidden transform transition-all sm:my-8 sm:align-middle sm:max-w-lg w-full"
+              role="dialog" aria-modal="true" aria-labelledby="modal-headline">
+              <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div class="sm:flex sm:items-start">
+                  <div
+                    class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 text-red-600 sm:mx-0 sm:h-10 sm:w-10">
+                    <!-- Heroicon name: outline/exclamation -->
+                    <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                      stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-neutral-200" id="modal-headline">
+                      {{$t("deleteClient")}}
+                    </h3>
+                    <div class="mt-2">
+                      <p class="text-sm text-gray-500 dark:text-neutral-300">
+                        {{$t("deleteDialog1")}} <strong>{{clientDelete.name}}</strong>? {{$t("deleteDialog2")}}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 dark:border-neutral-700">
+                <button type="button" @click="deleteClient(clientDelete); clientDelete = null"
+                  class="console-action is-danger w-full inline-flex justify-center px-4 py-2 text-base sm:ml-3 sm:w-auto sm:text-sm">
+                  {{$t("deleteClient")}}
+                </button>
+                <button type="button" @click="clientDelete = null"
+                  class="console-action mt-3 w-full inline-flex justify-center px-4 py-2 text-base sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                  {{$t("cancel")}}
+                </button>
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="authenticated === true && currentPage === 'settings'" class="console-page">
+          <div class="console-summary-grid">
+            <div class="console-summary-card p-4">
+              <div class="console-metric-label">WG_HOST</div>
+              <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-neutral-100">{{settings.wgHost || 'n/a'}}</div>
+            </div>
+            <div class="console-summary-card p-4">
+              <div class="console-metric-label">{{$t("setupDefaultDnsPlaceholder")}}</div>
+              <div class="mt-2 text-sm font-semibold text-gray-900 dark:text-neutral-100">{{settings.defaultDns || 'n/a'}}</div>
+            </div>
+            <div class="console-summary-card p-4">
+              <div class="console-metric-label">Telegram</div>
+              <div class="mt-2 text-2xl font-semibold text-gray-900 dark:text-neutral-100">{{settings.telegram.enabled ? $t("statusOn") : $t("statusOff")}}</div>
+            </div>
+          </div>
+
+          <div class="console-panel overflow-hidden">
+            <div class="console-panel-header">
+              <div class="console-toolbar">
+                <div>
+                  <div class="console-section-title">{{$t("settingsNav")}}</div>
+                  <div class="console-section-note mt-1">{{$t("settingsHint")}}</div>
+                </div>
+                <button @click="saveSettings" :disabled="settingsSaving"
+                  class="console-action px-4 py-2 text-sm disabled:opacity-50">
+                  {{ settingsSaving ? $t("saving") : $t("saveSettings") }}
+                </button>
+              </div>
+            </div>
+
+            <div class="p-4 md:p-5 space-y-6">
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div class="console-section-title">{{$t("generalSettingsTitle")}}</div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">WG_HOST</div>
+                    <input v-model.trim="settings.wgHost" type="text" :placeholder="$t('setupHostPlaceholder')" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("setupDefaultDnsPlaceholder")}}</div>
+                    <input v-model.trim="settings.defaultDns" type="text" :placeholder="$t('setupDefaultDnsPlaceholder')" class="console-input text-sm" />
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <div class="console-metric-label">{{$t("timezone")}}</div>
+                  <select v-model="settings.runtime.timezone" class="console-input text-sm">
+                    <option value="">{{$t("timezoneDefault")}}</option>
+                    <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">{{tz.label}}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div class="console-section-title">WireGuard Runtime</div>
+                <div class="console-section-note">Changing ports, addresses, MTU or AllowedIPs affects generated client configs and may require reconnecting clients.</div>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsWgPort")}}</div>
+                    <input v-model.trim="settings.runtime.wgPort" type="text" class="console-input text-sm bg-gray-100 dark:bg-gray-800" :disabled="true" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">WG_CONFIG_PORT</div>
+                    <input v-model.trim="settings.runtime.wgConfigPort" type="text" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsWgMtu")}}</div>
+                    <input v-model.trim="settings.runtime.wgMtu" type="text" class="console-input text-sm bg-gray-100 dark:bg-gray-800" :disabled="true" placeholder="1420" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsWgDefaultAddress")}}</div>
+                    <input v-model.trim="settings.runtime.wgDefaultAddress" type="text" class="console-input text-sm bg-gray-100 dark:bg-gray-800" :disabled="true" placeholder="10.8.0.x" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">WG_ALLOWED_IPS</div>
+                    <input v-model.trim="settings.runtime.wgAllowedIps" type="text" class="console-input text-sm" placeholder="0.0.0.0/0, ::/0" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">WG_PERSISTENT_KEEPALIVE</div>
+                    <input v-model.trim="settings.runtime.wgPersistentKeepalive" type="text" class="console-input text-sm" placeholder="0" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div class="console-section-title">{{$t("settingsUiFeatures")}}</div>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                  <label class="console-acl-toggle">
+                    <input v-model="settings.runtime.uiTrafficStats" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                    <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">{{$t("settingsUiTrafficStats")}}</span></span>
+                  </label>
+                  <label class="console-acl-toggle">
+                    <input v-model="settings.runtime.enableOneTimeLinks" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                    <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">{{$t("settingsEnableOneTimeLinks")}}</span></span>
+                  </label>
+                  <label class="console-acl-toggle">
+                    <input v-model="settings.runtime.enableExpireTime" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                    <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">{{$t("settingsEnableExpireTime")}}</span></span>
+                  </label>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                  <label class="console-acl-toggle">
+                    <input v-model="settings.runtime.enableSortClients" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                    <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">{{$t("settingsEnableSortClients")}}</span></span>
+                  </label>
+                  <label class="console-acl-toggle">
+                    <input v-model="settings.runtime.avatarUseGravatar" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                    <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">{{$t("settingsUseGravatar")}}</span></span>
+                  </label>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsUiChartType")}}</div>
+                    <input v-model.number="settings.runtime.uiChartType" type="number" min="0" max="3" class="console-input text-sm" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsDicebearType")}}</div>
+                    <input v-model.trim="settings.runtime.avatarDicebearType" type="text" class="console-input text-sm" placeholder="bottts" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div class="console-section-title">{{$t("settingsTrafficHistory")}}</div>
+                <div class="console-section-note">{{$t("settingsTrafficHistoryNote")}}</div>
+                <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+                  <label class="console-acl-toggle">
+                    <input v-model="settings.runtime.trafficHistoryEnabled" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                    <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">{{$t("settingsTrafficHistoryEnabled")}}</span></span>
+                  </label>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsTrafficSampleInterval")}}</div>
+                    <input v-model.number="settings.runtime.trafficSampleIntervalSeconds" type="number" min="1" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsTrafficRawRetention")}}</div>
+                    <input v-model.number="settings.runtime.trafficRawRetentionHours" type="number" min="1" class="console-input text-sm" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsTrafficMinuteRetention")}}</div>
+                    <input v-model.number="settings.runtime.trafficMinuteRetentionDays" type="number" min="1" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("settingsTrafficHourRetention")}}</div>
+                    <input v-model.number="settings.runtime.trafficHourRetentionDays" type="number" min="1" class="console-input text-sm" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div class="console-section-title">{{$t("securitySettingsTitle")}}</div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("setupPassword")}}</div>
+                    <input v-model="settings.newPassword" type="password" :placeholder="$t('setupPassword')" autocomplete="new-password" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("setupPasswordConfirm")}}</div>
+                    <input v-model="settings.newPasswordConfirm" type="password" :placeholder="$t('setupPasswordConfirm')" autocomplete="new-password" class="console-input text-sm" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white/90 dark:bg-neutral-950/70 p-4 md:p-5 space-y-4">
+                <div class="console-section-title">{{$t("telegramSettingsTitle")}}</div>
+                <label class="console-acl-toggle">
+                  <input v-model="settings.telegram.enabled" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                  <span class="console-acl-toggle-copy">
+                    <span class="console-acl-toggle-label">{{$t("telegramBotEnabled")}}</span>
+                    <span class="console-acl-toggle-hint">{{$t("telegramSettingsHint")}}</span>
+                  </span>
+                </label>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("telegramBotToken")}}</div>
+                    <input v-model.trim="settings.telegram.token" type="text" :placeholder="$t('telegramBotToken')" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("telegramAdminIds")}}</div>
+                    <input v-model.trim="settings.telegram.adminIds" type="text" :placeholder="$t('telegramAdminIdsPlaceholder')" class="console-input text-sm" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("telegramPollTimeoutSeconds")}}</div>
+                    <input v-model.number="settings.telegram.pollTimeoutSeconds" type="number" min="1" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("telegramSubscriptionPhoneNumber")}}</div>
+                    <input v-model.trim="settings.telegram.subscriptionPhoneNumber" type="text" :placeholder="$t('telegramSubscriptionPhoneNumberPlaceholder')" class="console-input text-sm" />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("telegramSubscriptionRecipientName")}}</div>
+                    <input v-model.trim="settings.telegram.subscriptionRecipientName" type="text" :placeholder="$t('telegramSubscriptionRecipientNamePlaceholder')" class="console-input text-sm" />
+                  </div>
+                  <div class="space-y-2">
+                    <div class="console-metric-label">{{$t("telegramSubscriptionBankName")}}</div>
+                    <input v-model.trim="settings.telegram.subscriptionBankName" type="text" :placeholder="$t('telegramSubscriptionBankNamePlaceholder')" class="console-input text-sm" />
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <div class="console-metric-label">{{$t("telegramSubscriptionPaymentNote")}}</div>
+                  <input v-model.trim="settings.telegram.subscriptionPaymentNote" type="text" :placeholder="$t('telegramSubscriptionPaymentNotePlaceholder')" class="console-input text-sm" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div v-if="setupState && setupState.needsSetup" class="console-login-shell">
+        <form @submit="setup" class="console-login-card overflow-hidden">
+          <div class="console-login-header">
+            <div class="console-subtitle">{{$t('setupEyebrow')}}</div>
+            <div class="mt-3 flex items-center gap-4">
+              <div class="console-brand-mark">
+                <img src="./img/logo.svg" width="34" class="block" />
+              </div>
+              <div>
+                <h1 class="text-3xl font-semibold text-gray-900 dark:text-neutral-100">{{$t('setupTitle')}}</h1>
+                <div class="console-section-note mt-1">{{$t('setupDescription')}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="console-login-body">
+            <input type="text" name="wg-host" :placeholder="$t('setupHostPlaceholder')" v-model="setupWgHost"
+              class="console-input mb-4 text-sm" />
+            <input type="text" name="default-dns" :placeholder="$t('setupDefaultDnsPlaceholder')" v-model="setupDefaultDns"
+              class="console-input mb-4 text-sm" />
+            <div class="mb-4 grid grid-cols-1 gap-3">
+              <div class="console-section-note">WireGuard Runtime</div>
+              <div class="console-section-note">These defaults can be changed later in Settings. Ports and address plan affect generated client configs.</div>
+              <input type="text" name="wg-port" placeholder="WG_PORT" v-model="setupRuntime.wgPort" class="console-input text-sm" />
+              <input type="text" name="wg-config-port" placeholder="WG_CONFIG_PORT" v-model="setupRuntime.wgConfigPort" class="console-input text-sm" />
+              <input type="text" name="wg-default-address" placeholder="WG_DEFAULT_ADDRESS (10.8.0.x)" v-model="setupRuntime.wgDefaultAddress" class="console-input text-sm" />
+              <input type="text" name="wg-allowed-ips" placeholder="WG_ALLOWED_IPS" v-model="setupRuntime.wgAllowedIps" class="console-input text-sm" />
+              <input type="text" name="wg-persistent-keepalive" placeholder="WG_PERSISTENT_KEEPALIVE" v-model="setupRuntime.wgPersistentKeepalive" class="console-input text-sm" />
+              <input type="text" name="wg-mtu" placeholder="WG_MTU" v-model="setupRuntime.wgMtu" class="console-input text-sm" />
+            </div>
+            <div class="mb-4 grid grid-cols-1 gap-3">
+              <div class="console-section-note">Features</div>
+              <label class="console-acl-toggle">
+                <input v-model="setupRuntime.uiTrafficStats" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">UI_TRAFFIC_STATS</span></span>
+              </label>
+              <label class="console-acl-toggle">
+                <input v-model="setupRuntime.trafficHistoryEnabled" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">TRAFFIC_HISTORY_ENABLED</span></span>
+              </label>
+              <label class="console-acl-toggle">
+                <input v-model="setupRuntime.enableOneTimeLinks" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">WG_ENABLE_ONE_TIME_LINKS</span></span>
+              </label>
+              <label class="console-acl-toggle">
+                <input v-model="setupRuntime.enableExpireTime" type="checkbox" class="mt-1 rounded border-gray-300 text-red-700 focus:ring-red-700">
+                <span class="console-acl-toggle-copy"><span class="console-acl-toggle-label">WG_ENABLE_EXPIRES_TIME</span></span>
+              </label>
+            </div>
+            <input type="password" name="setup-password" :placeholder="$t('setupPassword')" v-model="setupPassword"
+              autocomplete="new-password" class="console-input mb-4 text-sm" />
+            <input type="password" name="setup-password-confirm" :placeholder="$t('setupPasswordConfirm')" v-model="setupPasswordConfirm"
+              autocomplete="new-password" class="console-input mb-5 text-sm" />
+
+            <button v-if="settingUp"
+              class="console-action w-full py-3 text-sm cursor-not-allowed">
+              <svg class="w-5 h-5 animate-spin mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+            <input v-else type="submit"
+              class="console-action w-full py-3 text-sm"
+              :class="setupPassword && setupPasswordConfirm && setupWgHost ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'"
+              :disabled="!setupPassword || !setupPasswordConfirm || !setupWgHost"
+              :value="$t('setupSubmit')">
+          </div>
+        </form>
+      </div>
+
+      <div v-if="authenticated === false && !(setupState && setupState.needsSetup)" class="console-login-shell">
+        <form @submit="login" class="console-login-card overflow-hidden">
+          <div class="console-login-header">
+            <div class="console-subtitle">{{$t('dashboardSubtitle')}}</div>
+            <div class="mt-3 flex items-center gap-4">
+              <div class="console-brand-mark">
+                <img src="./img/logo.svg" width="34" class="block" />
+              </div>
+              <div>
+                <h1 class="text-3xl font-semibold text-gray-900 dark:text-neutral-100">AmneziaWG</h1>
+                <div class="console-section-note mt-1">{{$t('clientsSubtitle')}}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="console-login-body">
+            <input type="password" name="password" :placeholder="$t('password')" v-model="password" autocomplete="current-password"
+              class="console-input mb-5 text-sm" />
+
+            <label v-if="rememberMeEnabled" class="inline-flex items-center gap-3 mb-5 cursor-pointer" :title="$t('titleRememberMe')">
+              <input type="checkbox" class="sr-only" v-model="remember">
+              <span class="console-status-badge" :class="remember ? 'is-enabled' : 'is-disabled'">
+                <span class="console-status-dot"></span>
+                <span>{{remember ? $t('statusOn') : $t('statusOff')}}</span>
+              </span>
+              <span class="text-sm text-gray-700 dark:text-neutral-200">{{$t("rememberMe")}}</span>
+            </label>
+
+            <button v-if="authenticating"
+              class="console-action w-full py-3 text-sm cursor-not-allowed">
+              <svg class="w-5 h-5 animate-spin mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            </button>
+            <input v-else type="submit"
+              class="console-action w-full py-3 text-sm"
+              :class="password ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'"
+              :disabled="!password"
+              :value="$t('signIn')">
+          </div>
+        </form>
+      </div>
+
+      <div v-if="authenticated === null && !(setupState && setupState.needsSetup)" class="console-login-shell">
+        <div class="console-login-card">
+          <div class="console-login-body text-center text-gray-500 dark:text-neutral-400">
+            <svg class="w-5 h-5 animate-spin mx-auto" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="./js/vendor/vue.min.js"></script>
+  <script src="./js/vendor/vue-i18n.min.js"></script>
+  <script src="./js/vendor/apexcharts.min.js"></script>
+  <script src="./js/vendor/vue-apexcharts.min.js"></script>
+  <script src="./js/vendor/sha256.min.js"></script>
+  <script src="./js/vendor/timeago.full.min.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/i18n.js"></script>
+  <script src="./js/app.js"></script>
+</body>
+
+</html>

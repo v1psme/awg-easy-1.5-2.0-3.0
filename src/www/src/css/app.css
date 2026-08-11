@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.p-0 {
+  padding: 0;
+}
+
+.traffic-modal-backdrop {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 32%),
+    radial-gradient(circle at top right, rgba(220, 38, 38, 0.15), transparent 30%),
+    rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(10px);
+}
+
+.dark .traffic-modal-backdrop {
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.2), transparent 34%),
+    radial-gradient(circle at top right, rgba(244, 63, 94, 0.18), transparent 32%),
+    rgba(2, 6, 23, 0.72);
+}
+
+.traffic-modal-shell {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background:
+    linear-gradient(180deg, rgba(248, 250, 252, 0.96), rgba(255, 255, 255, 0.92));
+}
+
+.dark .traffic-modal-shell {
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(23, 23, 23, 0.98), rgba(10, 10, 10, 0.96));
+}
+
+.traffic-modal-header {
+  background:
+    linear-gradient(135deg, rgba(219, 234, 254, 0.9), rgba(255, 255, 255, 0.65) 52%, rgba(254, 226, 226, 0.82));
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.dark .traffic-modal-header {
+  background:
+    linear-gradient(135deg, rgba(30, 41, 59, 0.96), rgba(23, 23, 23, 0.78) 52%, rgba(69, 10, 10, 0.72));
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.traffic-period-tabs {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.dark .traffic-period-tabs {
+  background: rgba(15, 23, 42, 0.42);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.traffic-stat-card,
+.traffic-chart-card,
+.traffic-live-panel {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(248, 250, 252, 0.78));
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.dark .traffic-stat-card,
+.dark .traffic-chart-card,
+.dark .traffic-live-panel {
+  border-color: rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(24, 24, 27, 0.96), rgba(10, 10, 10, 0.84));
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.26);
+}
+
+.traffic-stat-card--blue {
+  box-shadow: inset 3px 0 0 rgba(37, 99, 235, 0.9), 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.traffic-stat-card--red {
+  box-shadow: inset 3px 0 0 rgba(220, 38, 38, 0.9), 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.traffic-stat-card--sky {
+  box-shadow: inset 3px 0 0 rgba(14, 165, 233, 0.9), 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.traffic-stat-card--rose {
+  box-shadow: inset 3px 0 0 rgba(244, 63, 94, 0.9), 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.traffic-stat-card--indigo {
+  box-shadow: inset 3px 0 0 rgba(99, 102, 241, 0.9), 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.traffic-stat-card--orange {
+  box-shadow: inset 3px 0 0 rgba(249, 115, 22, 0.9), 0 8px 28px rgba(15, 23, 42, 0.06);
+}
+
+.dark .traffic-stat-card--blue,
+.dark .traffic-stat-card--red,
+.dark .traffic-stat-card--sky,
+.dark .traffic-stat-card--rose,
+.dark .traffic-stat-card--indigo,
+.dark .traffic-stat-card--orange {
+  box-shadow: none;
+}
+
+.traffic-chart-card .apexcharts-xaxis-label,
+.traffic-chart-card .apexcharts-yaxis-label,
+.traffic-chart-card .apexcharts-tooltip-text,
+.traffic-chart-card .apexcharts-tooltip-series-group,
+.traffic-chart-card .apexcharts-tooltip-title {
+  color: #475569 !important;
+}
+
+.dark .traffic-chart-card .apexcharts-xaxis-label,
+.dark .traffic-chart-card .apexcharts-yaxis-label,
+.dark .traffic-chart-card .apexcharts-tooltip-text,
+.dark .traffic-chart-card .apexcharts-tooltip-series-group,
+.dark .traffic-chart-card .apexcharts-tooltip-title {
+  color: #e5e7eb !important;
+}
+
+.dark .traffic-chart-card .apexcharts-tooltip,
+.dark .traffic-chart-card .apexcharts-xaxistooltip,
+.dark .traffic-chart-card .apexcharts-yaxistooltip {
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35) !important;
+}

@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AmneziaWG</title>
+  <link rel="icon" href="./img/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light dark;
+      --console-bg: #d9dde3;
+      --console-grid: rgba(18, 37, 63, 0.06);
+      --console-panel: #f4f6f8;
+      --console-panel-strong: #ffffff;
+      --console-line: #b8c2cf;
+      --console-line-strong: #8b98ab;
+      --console-text: #1d2938;
+      --console-text-muted: #5f6b7d;
+      --console-accent: #2f5f99;
+      --console-accent-strong: #224873;
+      --console-danger: #a33a32;
+      --console-shadow: 0 20px 60px rgba(28, 44, 69, 0.14);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --console-bg: #171c24;
+        --console-grid: rgba(151, 169, 196, 0.05);
+        --console-panel: #202733;
+        --console-panel-strong: #28313f;
+        --console-line: #394455;
+        --console-line-strong: #4a566a;
+        --console-text: #eef3f9;
+        --console-text-muted: #a8b4c6;
+        --console-accent: #5f8dcc;
+        --console-accent-strong: #7aa3de;
+        --console-danger: #d06b64;
+        --console-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", Tahoma, sans-serif;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.18)),
+        linear-gradient(90deg, var(--console-grid) 1px, transparent 1px),
+        linear-gradient(var(--console-grid) 1px, transparent 1px),
+        var(--console-bg);
+      background-size: auto, 24px 24px, 24px 24px, auto;
+      color: var(--console-text);
+      min-height: 100vh;
+      padding: 22px 12px 32px;
+    }
+    .console-shell {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+    .console-topbar {
+      border: 1px solid var(--console-line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(228, 233, 240, 0.94));
+      box-shadow: var(--console-shadow);
+    }
+    .console-brand-strip {
+      border-bottom: 1px solid var(--console-line);
+      background: linear-gradient(180deg, rgba(55, 90, 133, 0.15), rgba(255, 255, 255, 0));
+      padding: 22px 24px 20px;
+    }
+    .console-brand-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .console-brand-mark {
+      width: 54px;
+      height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--console-line);
+      background: linear-gradient(180deg, var(--console-panel-strong), #e8edf2);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+    .console-brand-mark img { width: 34px; height: 34px; display: block; }
+    .console-subtitle {
+      color: var(--console-text-muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin: 0 0 4px;
+    }
+    .console-brand-title {
+      margin: 0;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--console-text);
+    }
+    .console-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .console-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border: 1px solid var(--console-line);
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--console-text-muted);
+      font-size: 0.74rem;
+      font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    }
+    .console-panel {
+      border: 1px solid var(--console-line);
+      border-top: none;
+      background: var(--console-panel);
+      box-shadow: var(--console-shadow);
+    }
+    .console-panel-header {
+      border-bottom: 1px solid var(--console-line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(219, 226, 235, 0.78));
+      padding: 16px 20px;
+    }
+    .console-section-title {
+      margin: 0 0 4px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--console-text);
+    }
+    .console-section-note {
+      margin: 0;
+      color: var(--console-text-muted);
+      font-size: 0.86rem;
+    }
+    .console-panel-body {
+      padding: 20px;
+    }
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .field label {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--console-text-muted);
+    }
+    .field input {
+      width: 100%;
+      border: 1px solid var(--console-line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(236, 240, 245, 0.92));
+      color: var(--console-text);
+      padding: 12px 14px;
+      font: inherit;
+      outline: none;
+    }
+    .field input:focus {
+      border-color: var(--console-accent);
+      box-shadow: 0 0 0 1px var(--console-accent);
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    button {
+      border: 1px solid var(--console-line);
+      padding: 11px 16px;
+      font: inherit;
+      cursor: pointer;
+      background: linear-gradient(180deg, var(--console-panel-strong), #e8edf2);
+      color: var(--console-text);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+    }
+    .primary {
+      background: linear-gradient(180deg, var(--console-accent), var(--console-accent-strong));
+      color: #fff;
+      flex: 1;
+      border-color: var(--console-accent-strong);
+    }
+    .primary:hover { filter: brightness(1.04); }
+    button:hover {
+      border-color: var(--console-line-strong);
+    }
+    .hidden { display: none !important; }
+    .error {
+      margin: 0 0 16px;
+      padding: 12px 14px;
+      background: rgba(220, 38, 38, 0.12);
+      border: 1px solid rgba(220, 38, 38, 0.28);
+      color: var(--console-danger);
+      white-space: pre-wrap;
+    }
+    .hint {
+      color: var(--console-text-muted);
+      font-size: 0.88rem;
+      margin-top: 8px;
+    }
+    @media (prefers-color-scheme: dark) {
+      .console-topbar {
+        background: linear-gradient(180deg, rgba(45, 54, 68, 0.96), rgba(28, 35, 45, 0.96));
+      }
+      .console-brand-mark,
+      button {
+        background: linear-gradient(180deg, #303949, #262f3e);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+      }
+      .console-panel-header {
+        background: linear-gradient(180deg, rgba(57, 68, 85, 0.85), rgba(35, 44, 56, 0.86));
+      }
+      .field input {
+        background: linear-gradient(180deg, rgba(48, 57, 73, 0.94), rgba(38, 47, 62, 0.94));
+      }
+      .console-pill {
+        background: rgba(17, 23, 31, 0.45);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="console-shell">
+    <div class="console-topbar">
+      <div class="console-brand-strip">
+        <div class="console-brand-meta">
+          <div class="console-brand-mark">
+            <img src="./img/logo.svg" alt="AmneziaWG">
+          </div>
+          <div>
+            <h1 class="console-brand-title">AmneziaWG</h1>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="console-panel">
+      <div id="error" class="error hidden"></div>
+
+      <section id="setup-section" class="hidden">
+        <div class="console-panel-header">
+          <h2 class="console-section-title">Первичная настройка</h2>
+          <p class="console-section-note">Задай пароль администратора и адрес сервера перед первым запуском панели.</p>
+        </div>
+        <div class="console-panel-body">
+          <form id="setup-form">
+            <div class="field">
+              <label for="setup-host">WG_HOST</label>
+              <input id="setup-host" name="wgHost" type="text" autocomplete="off" required>
+            </div>
+            <div class="field">
+              <label for="setup-dns">DNS для клиентов</label>
+              <input id="setup-dns" name="defaultDns" type="text" autocomplete="off" placeholder="1.1.1.1">
+            </div>
+            <div class="field">
+              <label for="setup-password">Пароль администратора</label>
+              <input id="setup-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+            </div>
+            <div class="field">
+              <label for="setup-password-confirm">Подтверждение пароля</label>
+              <input id="setup-password-confirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="8" required>
+            </div>
+            <div class="actions">
+              <button class="primary" type="submit">Сохранить</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section id="login-section" class="hidden">
+        <div class="console-panel-header">
+          <h2 class="console-section-title">Вход</h2>
+          <p class="console-section-note">Авторизуйся для доступа к панели управления и настройкам сервера.</p>
+        </div>
+        <div class="console-panel-body">
+          <form id="login-form">
+            <div id="login-username-field" class="field hidden">
+              <label for="login-username">Имя пользователя</label>
+              <input id="login-username" name="login" type="text" autocomplete="username">
+            </div>
+            <div class="field">
+              <label for="login-password">Пароль</label>
+              <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+            </div>
+            <div class="actions">
+              <button class="primary" type="submit">Войти</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const errorEl = document.getElementById('error');
+    const setupSection = document.getElementById('setup-section');
+    const loginSection = document.getElementById('login-section');
+    const setupForm = document.getElementById('setup-form');
+    const loginForm = document.getElementById('login-form');
+
+    const showError = (message) => {
+      errorEl.textContent = message || 'Unknown error';
+      errorEl.classList.remove('hidden');
+    };
+
+    const clearError = () => {
+      errorEl.textContent = '';
+      errorEl.classList.add('hidden');
+    };
+
+    const redirectToApp = () => {
+      window.location.replace('./');
+    };
+
+    const requestJson = async (url, options = {}) => {
+      const response = await fetch(url, {
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+        ...options,
+      });
+
+      if (!response.ok) {
+        let message = `${response.status}`;
+        try {
+          const data = await response.json();
+          message = data.error || data.statusMessage || data.message || message;
+        } catch {}
+        throw new Error(message);
+      }
+
+      return response.json();
+    };
+
+    let adminLoginRequired = false;
+
+    const init = async () => {
+      try {
+        const setupState = await requestJson('./api/setup-state');
+        if (setupState.needsSetup) {
+          setupSection.classList.remove('hidden');
+          document.getElementById('setup-dns').value = '1.1.1.1';
+          return;
+        }
+
+        if (setupState.adminLoginRequired) {
+          adminLoginRequired = true;
+          document.getElementById('login-username-field').classList.remove('hidden');
+        }
+
+        const session = await requestJson('./api/session');
+        if (session.authenticated) {
+          redirectToApp();
+          return;
+        }
+
+        loginSection.classList.remove('hidden');
+      } catch (err) {
+        showError(err.message);
+      }
+    };
+
+    setupForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearError();
+
+      const form = new FormData(setupForm);
+      const password = String(form.get('password') || '');
+      const passwordConfirm = String(form.get('passwordConfirm') || '');
+      if (password !== passwordConfirm) {
+        showError('Пароли не совпадают.');
+        return;
+      }
+
+      try {
+        await requestJson('./api/setup', {
+          method: 'POST',
+          body: JSON.stringify({
+            wgHost: String(form.get('wgHost') || ''),
+            defaultDns: String(form.get('defaultDns') || ''),
+            password,
+          }),
+        });
+
+        await requestJson('./api/session', {
+          method: 'POST',
+          body: JSON.stringify({
+            password,
+            remember: true,
+          }),
+        });
+
+        redirectToApp();
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearError();
+
+      const form = new FormData(loginForm);
+      const body = {
+        password: String(form.get('password') || ''),
+        remember: true,
+      };
+      if (adminLoginRequired) {
+        body.login = String(form.get('login') || '');
+      }
+
+      try {
+        await requestJson('./api/session', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+
+        redirectToApp();
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
