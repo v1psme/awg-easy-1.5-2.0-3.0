@@ -961,14 +961,17 @@ module.exports = class Server {
       .get('/api/wireguard/client/:clientId/vpn-config', defineEventHandler(async (event) => {
         const clientId = getRouterParam(event, 'clientId');
         const client = await WireGuard.getClient({ clientId });
-        const config = await WireGuard.getClientVpnConfig({ clientId });
+        // .vpn файл = та же закодированная строка, что и в vpn:// ссылке
+        // (как собственный экспорт AmneziaVPN: qCompress payload + base64url).
+        // Открытый JSON клиент не примет — только кодированный контейнер.
+        const config = await WireGuard.getClientVpnKey({ clientId });
         const configName = client.name
           .replace(/[^a-zA-Z0-9_=+.-]/g, '-')
           .replace(/-+/g, '-')
           .replace(/^-|-$/g, '') || clientId;
         setHeader(event, 'Content-Disposition', `attachment; filename="${configName || clientId}.vpn"`);
-        setHeader(event, 'Content-Type', 'application/json');
-        return JSON.stringify(config, null, 2);
+        setHeader(event, 'Content-Type', 'text/plain');
+        return config;
       }))
       .get('/api/wireguard/client/:clientId/configuration', defineEventHandler(async (event) => {
         const clientId = getRouterParam(event, 'clientId');
