@@ -8,7 +8,7 @@
 > **AmneziaWG требует специальный клиент.** Стандартные WireGuard клиенты, такие как официальное приложение WireGuard, WireGuard Go, tun2socks или Tunsafe, **НЕ** будут работать, так как используют стандартное рукопожатие. Необходимо использовать [AmneziaVPN клиент](https://amnezia.org) или [amneziawg-go](https://github.com/amnezia-vpn/amneziawg-go).
 
 > [!NOTE]
-> **Версия AWG** управляется переменной `AMNEZIA_VERSION`: `1.5` (базовая обфускация), `2` (добавляет CPS I1–I5 + DNS-mimic) или `3` (добавляет таймеры, ContentPadding, HeaderProtectionKey — экспериментально). Устаревшая переменная `AMNEZIAWG_ENABLED=true` всё ещё принимается (эквивалент v2), но её использование не рекомендуется.
+> **Версия AWG** управляется переменной `AMNEZIA_VERSION`: `1.5` (базовая обфускация), `2` (добавляет CPS I1–I5 + DNS-mimic) или `3` (добавляет таймеры, ContentPadding, HeaderProtectionKey — включён по умолчанию). Устаревшая переменная `AMNEZIAWG_ENABLED=true` всё ещё принимается (эквивалент v2), но её использование не рекомендуется.
 
 ---
 
@@ -17,7 +17,7 @@
 ### VPN и Протокол
 - **AWG 1.5** — параметры Jc, Jmin, Jmax, S1, S2, H1–H4
 - **AWG 2.0** — добавляет S3, S4, I1–I5 CPS (сигнатуры инициирующих пакетов), I1 авто-генерируется как DNS-mimic
-- **AWG 3.0** — добавляет таймеры (RekeyAfterTime/RekeyTimeout/RejectAfterTime/KeepaliveTimeout/MaxHandshakeAttempts), ContentPaddingAddition, HeaderProtectionKey (экспериментально, выключено по умолчанию)
+- **AWG 3.0** — добавляет таймеры (RekeyAfterTime/RekeyTimeout/RejectAfterTime/KeepaliveTimeout/MaxHandshakeAttempts), ContentPaddingAddition, HeaderProtectionKey (включён по умолчанию для v3; см. матрицу клиентов ниже)
 - Авто-генерация непересекающихся диапазонов H1–H4 (равномерно по пространству uint32 для v2+)
 - Авто S1/S2 с ограничением `S1+56 ≠ S2` (требование документации Amnezia)
 - Режим userspace через `amneziawg-go` — модуль ядра не требуется
@@ -28,7 +28,7 @@
 - Панель со списком клиентов и графиками трафика (ApexCharts)
 - Генерация QR-кодов для конфигураций клиентов
 - Скачивание / копирование конфигураций / одноразовые ссылки (`/cnf/:link`)
-- **Экспорт `.vpn` файла для AmneziaVPN** + копирование ключа `vpn://`
+- **Экспорт `.vpn` файла для AmneziaVPN** + копирование ключа `vpn://` (v3-поля включая HeaderProtectionKey передаются JSON-контейнером)
 - Создание, включение/отключение, удаление клиентов
 - Для каждого клиента: имя, адрес, email, Telegram ID, группы, срок действия, назначенный аплинк
 - Статистика трафика по клиентам (скачивание/загрузка)
@@ -262,8 +262,8 @@ networks:
 
 | Переменная | По умолчанию | Описание |
 |---|---|---|
-| `HEADER_PROTECTION_KEY_ENABLE` | `false` | Включить защиту заголовков (экспериментально, см. Известные Проблемы) |
-| `HEADER_PROTECTION_KEY` | авто | 44-символьный base64 ключ (авто-генерируется если включено) |
+| `HEADER_PROTECTION_KEY_ENABLE` | `true` (v3) | Защита заголовков: `true` по умолчанию для v3, `false` — выключить |
+| `HEADER_PROTECTION_KEY` | авто | 44-символьный base64 пин ключа. Пусто → генерируется один раз при первом старте и сохраняется в БД (стабилен между рестартами). Смена значения = ротация: все клиенты должны переимпортировать конфиги |
 | `CONTENT_PADDING_ADDITION` | `16-128` | Диапазон дополнения содержимого, или `(off)` |
 | `REKEY_AFTER_TIME` | `100-145` | Диапазон времени до пересоздания ключа, или `(off)` |
 | `REKEY_TIMEOUT` | `4-10` | Диапазон таймаута пересоздания ключа, или `(off)` |
@@ -466,12 +466,13 @@ networks:
 
 | Проблема | Статус | Описание |
 |---|---|---|
-| **HeaderProtectionKey (v3)** | ❌ Не работает | Не совместим с текущим клиентом AmneziaVPN. `HEADER_PROTECTION_KEY_ENABLE` по умолчанию `false` |
+| **HeaderProtectionKey (v3)** | ✅ Работает | `.conf` — для AmneziaWG 3.1+ (Android). Для AmneziaVPN 5.0.0.5 — только через `.vpn`/`vpn://` (JSON-контейнер). Включение HPK ломает старые конфиги клиентов (must-match) — нужно переимпортировать |
 | **Стабильность I2–I5** | ⚠️ Отключены | Периодически ломают рукопожатие с некоторыми сборками клиента. По умолчанию отключены (пустые в `.env`); используйте только I1 при проблемах |
 | **Лимит `<r>`** | ⚠️ Задокументировано | Значения выше **40** ломают рукопожатие (эмпирически, на 10.08.2026). Контролируется `I_R_MIN=2`, `I_R_MAX=40` |
 | **CPS тег `<t>`** | ❌ Запрещён | Никогда не использовать — внедряет временные метки в пакеты, вызывая несовпадение рукопожатия |
 | **Ручной iptables** | ⚠️ Требуется | Межсерверные аплинк-туннели требуют ручных правил FORWARD + MASQUERADE после перезапуска контейнера (или используйте хуки `WG_PRE_UP`/`WG_POST_UP`) |
-| **v3 .vpn экспорт** | ⚠️ Протокол v2 | Экспорт `.vpn` использует версию протокола 2 (AmneziaVPN разбирает только v2). Параметры v3 включены, но совместимость с клиентом ограничена |
+| **AmneziaVPN + `.conf`** | ❌ Баг клиента | AmneziaVPN ≤5.0.0.5 молча отбрасывает v3-поля при импорте `.conf` ([amnezia-client#2942](https://github.com/amnezia-vpn/amnezia-client/issues/2942)) — используйте `.vpn`/`vpn://` |
+| **AmneziaWG for Windows 2.0.2** | ❌ Нет v3 | Релиз вышел раньше протокола v3 — HPK-парсера нет; для Windows-парка используйте v2-контейнер или AmneziaVPN с `vpn://` |
 
 ---
 
@@ -568,12 +569,14 @@ npm run buildcss           # перекомпиляция Tailwind CSS
 
 Для подключения необходим **AmneziaWG-совместимый клиент**:
 
-| Платформа | Клиент |
-|---|---|
-| Windows / macOS / Linux | [AmneziaVPN](https://amnezia.org) |
-| Linux CLI | [amneziawg-go](https://github.com/amnezia-vpn/amneziawg-go) |
-| Android | [AmneziaVPN для Android](https://play.google.com/store/apps/details?id=org.amnezia.vpn) |
-| iOS | [AmneziaVPN для iOS](https://apps.apple.com/app/amnezia-vpn/id1600529900) |
+| Платформа | Клиент | AWG 3.0 (HPK) |
+|---|---|---|
+| Windows / macOS / Linux | [AmneziaVPN](https://amnezia.org) | ✅ через `.vpn`/`vpn://` (импорт `.conf` ломает v3 — amnezia-client#2942) |
+| Android | [AmneziaWG for Android](https://github.com/amnezia-vpn/amneziawg-android) 3.1+ | ✅ через `.conf` (сборка из исходников; Play-версия 2.0.1 не умеет) |
+| Android | [AmneziaVPN для Android](https://play.google.com/store/apps/details?id=org.amnezia.vpn) | ✅ через `.vpn`/`vpn://` |
+| iOS | [AmneziaVPN для iOS](https://apps.apple.com/app/amnezia-vpn/id1600529900) | ✅ через `.vpn`/`vpn://` |
+| Windows | AmneziaWG for Windows 2.0.2 | ❌ нет HPK-парсера — используйте v2-контейнер |
+| Linux CLI | [amneziawg-go](https://github.com/amnezia-vpn/amneziawg-go) 3.x | ✅ через `.conf` |
 
 Стандартные WireGuard клиенты (официальное приложение WireGuard, WireGuard Go, TunSafe и др.) **не совместимы** из-за кастомного обфусцированного рукопожатия.
 

@@ -8,6 +8,7 @@ const net = require('node:net');
 const dns = require('node:dns').promises;
 const debug = require('debug')('WireGuard');
 const crypto = require('node:crypto');
+const zlib = require('node:zlib');
 const QRCode = require('qrcode');
 
 const Util = require('./Util');
@@ -3077,6 +3078,64 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
     });
   }
 
+  __migrateHeaderProtection(config) {
+    // v3: HeaderProtectionKey миграция (must-match поле — меняем только осознанно).
+    // Инлайн-require: в исходнике этих экспортов нет в деструктуризации (их
+    // добавляет wireguard-patch.sh только в v3-сборках).
+    const awg3Cfg = require('../config');
+    if (awg3Cfg.AMNEZIA_VERSION !== '3') {
+      return;
+    }
+
+    const { HEADER_PROTECTION_KEY_ENABLE, HEADER_PROTECTION_KEY } = awg3Cfg;
+    const prevHpk = config.server.headerProtectionKey || '';
+    if (HEADER_PROTECTION_KEY_ENABLE) {
+      let newHpk = prevHpk;
+      if (HEADER_PROTECTION_KEY && HEADER_PROTECTION_KEY !== prevHpk) {
+        // env-пин: явная ротация ключа администратором
+        newHpk = HEADER_PROTECTION_KEY;
+        debug('HeaderProtectionKey rotated from env — clients must re-import configs');
+      } else if (!prevHpk) {
+        // Первый запуск с HPK: генерируем ОДИН раз и сохраняем в persisted config
+        // (в config.js ключ не генерируется — иначе ротация при каждом рестарте)
+        newHpk = crypto.randomBytes(32).toString('base64');
+        debug('HeaderProtectionKey generated and persisted — clients must re-import configs');
+      }
+      if (newHpk !== prevHpk) {
+        config.server.headerProtectionKey = newHpk;
+        // Требование HeaderProtectionKey: S3/S4 не меньше 12 (config.js)
+        const s3 = Number(config.server.s3);
+        const s4 = Number(config.server.s4);
+        if (Number.isFinite(s3) && s3 < 12) {
+          config.server.s3 = 12 + Math.floor(Math.random() * (55 - 12 + 1));
+          debug(`S3 raised to ${config.server.s3} (HeaderProtectionKey requirement)`);
+        }
+        if (Number.isFinite(s4) && s4 < 12) {
+          config.server.s4 = 12 + Math.floor(Math.random() * (27 - 12 + 1));
+          debug(`S4 raised to ${config.server.s4} (HeaderProtectionKey requirement)`);
+        }
+      }
+    } else if (prevHpk) {
+      // Явное отключение: убираем HPK (все клиенты переимпортируются)
+      config.server.headerProtectionKey = '';
+      debug('HeaderProtectionKey disabled — removed from server config');
+    }
+
+    // Backfill v3-таймеров/padding (не must-match, но должны быть в серверном конфиге)
+    for (const [prop, envVal] of [
+      ['contentPaddingAddition', awg3Cfg.CONTENT_PADDING_ADDITION],
+      ['rekeyAfterTime', awg3Cfg.REKEY_AFTER_TIME],
+      ['rekeyTimeout', awg3Cfg.REKEY_TIMEOUT],
+      ['rejectAfterTime', awg3Cfg.REJECT_AFTER_TIME],
+      ['keepaliveTimeout', awg3Cfg.KEEPALIVE_TIMEOUT],
+      ['maxHandshakeAttempts', awg3Cfg.MAX_HANDSHAKE_ATTEMPTS],
+    ]) {
+      if (!config.server[prop] && envVal) {
+        config.server[prop] = envVal;
+      }
+    }
+  }
+
   async __initializeConfigUnlocked() {
     await this.__loadRuntimeSettings();
     const config = await this.__buildConfig();
@@ -3102,6 +3161,8 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
         clientIdx = lastOctet + 1;
       }
     }
+
+    this.__migrateHeaderProtection(config);
 
     await this.__saveConfig(config);
     await Util.exec('wg-quick down wg0').catch(() => {});
@@ -3354,9 +3415,14 @@ Endpoint = ${this.__resolvedWgHost}:${runtime.wgConfigPort}`;
 
   async getClientVpnKey({ clientId }) {
     const vpnConfig = await this.getClientVpnConfig({ clientId });
-    const json = JSON.stringify(vpnConfig);
-    const base64 = Buffer.from(json, 'utf8').toString('base64');
-    return `vpn://${base64}`;
+    // Формат vpn:// как в AmneziaVPN (exportController.cpp, qCompress) и конвертере
+    // awg-vpn-uri: 4 байта BE размера несжатого JSON + zlib(JSON) → base64url без padding.
+    // Клиент парсит: base64url → qUncompress (size+zlib), при неудаче — сырые байты.
+    const json = Buffer.from(JSON.stringify(vpnConfig), 'utf8');
+    const size = Buffer.alloc(4);
+    size.writeUInt32BE(json.length, 0);
+    const payload = Buffer.concat([size, zlib.deflateSync(json)]);
+    return `vpn://${payload.toString('base64url')}`;
   }
 
   async getClientVpnConfig({ clientId }) {
@@ -3375,10 +3441,27 @@ Endpoint = ${this.__resolvedWgHost}:${runtime.wgConfigPort}`;
     const clientIp = addrMatch ? addrMatch[1].replace(/\/.*/, '') : (client.address || '');
 
     // Протокольная версия из env: 1.5, 2.0, 3.0
-    // Для .vpn всегда 2 (AmneziaVPN app парсит только версию 2)
     const { AMNEZIA_VERSION } = require('../config');
-    const protoVersion = '2';
     const hasCPS = AMNEZIA_VERSION === '2' || AMNEZIA_VERSION === '3';
+    const isV3 = AMNEZIA_VERSION === '3';
+
+    // v3-поля (HeaderProtectionKey — must-match; таймеры/padding — опциональные).
+    // AmneziaVPN 5.0.0.5 читает их ТОЛЬКО из JSON last_config (парсер .conf их
+    // отбрасывает — апстрим-баг amnezia-client#2942), поэтому кладём сюда.
+    const v3fields = {
+      HeaderProtectionKey: config.server.headerProtectionKey || '',
+      ContentPaddingAddition: config.server.contentPaddingAddition || '',
+      RekeyAfterTime: config.server.rekeyAfterTime || '',
+      RekeyTimeout: config.server.rekeyTimeout || '',
+      RejectAfterTime: config.server.rejectAfterTime || '',
+      KeepaliveTimeout: config.server.keepaliveTimeout || '',
+      MaxHandshakeAttempts: config.server.maxHandshakeAttempts || '',
+    };
+    const nonEmptyV3 = Object.fromEntries(
+      Object.entries(v3fields).filter(([, v]) => v),
+    );
+    const hasV3Params = Object.keys(nonEmptyV3).length > 0;
+    const containerName = isV3 && hasV3Params ? 'amnezia-awg' : (hasCPS ? 'amnezia-awg2' : 'amnezia-awg');
 
     // last_config: JSON-строка с полным конфигом (как в Amnezia backup)
     const lastConfig = JSON.stringify({
@@ -3409,6 +3492,7 @@ Endpoint = ${this.__resolvedWgHost}:${runtime.wgConfigPort}`;
       I3: config.server.i3 || '',
       I4: config.server.i4 || '',
       I5: config.server.i5 || '',
+      ...nonEmptyV3,
       allowed_ips: ['0.0.0.0/0', '::/0'],
       config: clientConfig,
     });
@@ -3417,14 +3501,16 @@ Endpoint = ${this.__resolvedWgHost}:${runtime.wgConfigPort}`;
     return {
       hostName: this.__resolvedWgHost,
       description: client.name || 'AmneziaWG',
-      defaultContainer: hasCPS ? 'amnezia-awg2' : 'amnezia-awg',
+      defaultContainer: containerName,
       userName: '',
       password: '',
       port: 22,
       containers: [
         {
-          container: hasCPS ? 'amnezia-awg2' : 'amnezia-awg',
+          container: containerName,
           awg: {
+            ...(hasV3Params ? { protocol_version: '3' } : {}),
+            isThirdPartyConfig: true,
             H1: parsedLC.H1,
             H2: parsedLC.H2,
             H3: parsedLC.H3,

@@ -362,14 +362,14 @@ if (isAwg2Plus()) {
         module.exports.S3 = process.env.S3 || getRandomInt(12, 55);
         module.exports.S4 = process.env.S4 || getRandomInt(12, 27);
 
-        // Header protection key: опциональный, включается через .env
-        // (требует поддержки клиентом, по умолчанию выключен)
-        if (process.env.HEADER_PROTECTION_KEY_ENABLE === 'true') {
-          module.exports.HEADER_PROTECTION_KEY = process.env.HEADER_PROTECTION_KEY
-            || require('crypto').randomBytes(32).toString('base64');
-        } else {
-          module.exports.HEADER_PROTECTION_KEY = '';
-        }
+        // Header protection key: включён по умолчанию для v3
+        // (HEADER_PROTECTION_KEY_ENABLE=false — выключить)
+        // Сам ключ: только из env (44-char base64); если не задан —
+        // генерируется ОДИН раз в WireGuard.js и сохраняется в persisted config.
+        // Не генерировать здесь: randomBytes при каждом старте = ротация ключа
+        // при каждом рестарте контейнера (ломает всех клиентов).
+        module.exports.HEADER_PROTECTION_KEY_ENABLE = process.env.HEADER_PROTECTION_KEY_ENABLE !== 'false';
+        module.exports.HEADER_PROTECTION_KEY = process.env.HEADER_PROTECTION_KEY || '';
 
         // Таймеры и padding — все в формате диапазона "lo-hi" или "(off)"
         module.exports.CONTENT_PADDING_ADDITION = process.env.CONTENT_PADDING_ADDITION || '16-128';

@@ -8,7 +8,7 @@ Fork of [wg-easy](https://github.com/wg-easy/wg-easy) with added support for **A
 > **AmneziaWG requires a custom client.** Standard WireGuard clients such as the official WireGuard app, WireGuard Go, tun2socks, or Tunsafe will **NOT** work because they use the standard handshake. You must use the [AmneziaVPN client](https://amnezia.org) or [amneziawg-go](https://github.com/amnezia-vpn/amneziawg-go) to connect.
 
 > [!NOTE]
-> **AWG version** is controlled by `AMNEZIA_VERSION` env variable: `1.5` (basic obfuscation), `2` (adds CPS I1-I5 + DNS-mimic), or `3` (adds timers, ContentPadding, HeaderProtectionKey — experimental). The legacy `AMNEZIAWG_ENABLED=true` is still accepted (maps to v2) but deprecated.
+> **AWG version** is controlled by `AMNEZIA_VERSION` env variable: `1.5` (basic obfuscation), `2` (adds CPS I1-I5 + DNS-mimic), or `3` (adds timers, ContentPadding, HeaderProtectionKey — enabled by default). The legacy `AMNEZIAWG_ENABLED=true` is still accepted (maps to v2) but deprecated.
 
 ---
 
@@ -17,7 +17,7 @@ Fork of [wg-easy](https://github.com/wg-easy/wg-easy) with added support for **A
 ### VPN & Protocol
 - **AWG 1.5** — Jc, Jmin, Jmax, S1, S2, H1–H4 parameters
 - **AWG 2.0** — adds S3, S4, I1–I5 CPS (init packet signatures), I1 auto-generated as DNS-mimic
-- **AWG 3.0** — adds timers (RekeyAfterTime/RekeyTimeout/RejectAfterTime/KeepaliveTimeout/MaxHandshakeAttempts), ContentPaddingAddition, HeaderProtectionKey (experimental, off by default)
+- **AWG 3.0** — adds timers (RekeyAfterTime/RekeyTimeout/RejectAfterTime/KeepaliveTimeout/MaxHandshakeAttempts), ContentPaddingAddition, HeaderProtectionKey (on by default for v3; see client matrix below)
 - Auto-generated non-overlapping H1–H4 ranges (spread across uint32 space for v2+)
 - Auto S1/S2 with `S1+56 ≠ S2` constraint (Amnezia docs requirement)
 - Userspace mode via `amneziawg-go` — no kernel module required
@@ -28,7 +28,7 @@ Fork of [wg-easy](https://github.com/wg-easy/wg-easy) with added support for **A
 - Dashboard with client list, traffic charts (ApexCharts)
 - QR code generation for client configs
 - Direct config download / copy / one-time links (`/cnf/:link`)
-- **AmneziaVPN `.vpn` file export** + `vpn://` key copy
+- **AmneziaVPN `.vpn` file export** + `vpn://` key copy (v3 fields incl. HeaderProtectionKey carried via JSON container)
 - Create, enable/disable, delete clients
 - Per-client: name, address, email, Telegram ID, groups, expiration date, uplink assignment
 - Traffic statistics per client (download/upload)
@@ -262,8 +262,8 @@ Only active when `AMNEZIA_VERSION=3`. Values are ranges (`lo-hi`) or `(off)` to 
 
 | Variable | Default | Description |
 |---|---|---|
-| `HEADER_PROTECTION_KEY_ENABLE` | `false` | Enable header protection (experimental, see Known Issues) |
-| `HEADER_PROTECTION_KEY` | auto | 44-char base64 key (auto-generated if enabled) |
+| `HEADER_PROTECTION_KEY_ENABLE` | `true` (v3) | Header protection: on by default for v3, `false` to disable |
+| `HEADER_PROTECTION_KEY` | auto | 44-char base64 key pin. Empty → generated once on first boot and persisted (stable across restarts). Changing it rotates the key: all clients must re-import configs |
 | `CONTENT_PADDING_ADDITION` | `16-128` | Content padding range, or `(off)` |
 | `REKEY_AFTER_TIME` | `100-145` | Rekey-after time range, or `(off)` |
 | `REKEY_TIMEOUT` | `4-10` | Rekey timeout range, or `(off)` |
@@ -466,12 +466,13 @@ Only active when `AMNEZIA_VERSION=3`. Values are ranges (`lo-hi`) or `(off)` to 
 
 | Issue | Status | Details |
 |---|---|---|
-| **HeaderProtectionKey (v3)** | ❌ Broken | Not compatible with current AmneziaVPN client. `HEADER_PROTECTION_KEY_ENABLE` defaults to `false` |
+| **HeaderProtectionKey (v3)** | ✅ Works | `.conf` for AmneziaWG 3.1+ (Android). For AmneziaVPN 5.0.0.5 use `.vpn`/`vpn://` only (JSON container). Enabling HPK invalidates existing client configs (must-match) — re-import required |
 | **I2–I5 stability** | ⚠️ Disabled | Periodically break handshake with some client builds. Disabled by default (empty in `.env`); use I1-only if issues appear |
 | **`<r>` limit** | ⚠️ Documented | Values above **40** break handshake (empirical, as of 2026-08-10). Controlled by `I_R_MIN=2`, `I_R_MAX=40` |
 | **`<t>` CPS tag** | ❌ Forbidden | Never use — injects per-packet timestamps that cause handshake mismatch |
 | **Manual iptables** | ⚠️ Required | Inter-server uplink tunnels need manual FORWARD + MASQUERADE rules after container restart (or use `WG_PRE_UP`/`WG_POST_UP` hooks) |
-| **v3 .vpn export** | ⚠️ Protocol v2 | `.vpn` export uses protocol version 2 (AmneziaVPN app parses only v2). v3 params are included but client compatibility is limited |
+| **AmneziaVPN + `.conf`** | ❌ Client bug | AmneziaVPN ≤5.0.0.5 silently drops v3 fields on `.conf` import ([amnezia-client#2942](https://github.com/amnezia-vpn/amnezia-client/issues/2942)) — use `.vpn`/`vpn://` |
+| **AmneziaWG for Windows 2.0.2** | ❌ No v3 | Released before the v3 protocol — no HPK parser; use a v2 container for Windows, or AmneziaVPN with `vpn://` |
 
 ---
 
@@ -568,12 +569,14 @@ npm run buildcss           # recompile Tailwind CSS
 
 You must use an **AmneziaWG-compatible client** to connect:
 
-| Platform | Client |
-|---|---|
-| Windows / macOS / Linux | [AmneziaVPN](https://amnezia.org) |
-| Linux CLI | [amneziawg-go](https://github.com/amnezia-vpn/amneziawg-go) |
-| Android | [AmneziaVPN for Android](https://play.google.com/store/apps/details?id=org.amnezia.vpn) |
-| iOS | [AmneziaVPN for iOS](https://apps.apple.com/app/amnezia-vpn/id1600529900) |
+| Platform | Client | AWG 3.0 (HPK) |
+|---|---|---|
+| Windows / macOS / Linux | [AmneziaVPN](https://amnezia.org) | ✅ via `.vpn`/`vpn://` (`.conf` import breaks v3 — amnezia-client#2942) |
+| Android | [AmneziaWG for Android](https://github.com/amnezia-vpn/amneziawg-android) 3.1+ | ✅ via `.conf` (build from source; Play 2.0.1 doesn't support v3) |
+| Android | [AmneziaVPN for Android](https://play.google.com/store/apps/details?id=org.amnezia.vpn) | ✅ via `.vpn`/`vpn://` |
+| iOS | [AmneziaVPN for iOS](https://apps.apple.com/app/amnezia-vpn/id1600529900) | ✅ via `.vpn`/`vpn://` |
+| Windows | AmneziaWG for Windows 2.0.2 | ❌ no HPK parser — use a v2 container |
+| Linux CLI | [amneziawg-go](https://github.com/amnezia-vpn/amneziawg-go) 3.x | ✅ via `.conf` |
 
 Standard WireGuard clients (official WireGuard app, WireGuard Go, TunSafe, etc.) are **not compatible** due to the custom obfuscated handshake.
 
