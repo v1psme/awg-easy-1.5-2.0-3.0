@@ -3,23 +3,10 @@ set -e
 
 echo "=== AmneziaWG (version ${AMNEZIA_VERSION:-1.5}) + Web UI ==="
 
-# Генерация I1 — DNS-mimic формат
-generate_dns_mimic() {
-    local txid=$(openssl rand -hex 2)
-    local r_min="${I_R_MIN:-2}"
-    local r_max="${I_R_MAX:-40}"
-    local r_len=$(( r_min + (RANDOM % (r_max - r_min + 1)) ))
-    echo "<r ${r_len}><b 0x${txid}00010001000000000669636c6f756403636f6d0000010001c00c000100010000105a00044d583737>"
-}
-
-# Генерация I2-I5 — <b 0xHEX><r N> (без rc)
-generate_cps() {
-    local b_hex=$(openssl rand -hex 16)
-    local r_min="${I_R_MIN:-2}"
-    local r_max="${I_R_MAX:-40}"
-    local r_len=$(( r_min + (RANDOM % (r_max - r_min + 1)) ))
-    echo "<b 0x${b_hex}><r ${r_len}>"
-}
+# I1-I5 (CPS) больше НЕ генерируются в entrypoint: генерация — в src/lib/mimicry.js
+# (config.js + миграция WireGuard.js при старте). Node перезаписывает awg0.conf
+# при каждом старте, а серверный conf без I-строк валиден (I — декои, опциональны).
+# Здесь — только passthrough явно заданных в env значений.
 
 # Определяем исходящий интерфейс
 OUTBOUND_IFACE="${WAN_INTERFACE:-$(ip route | grep default | head -1 | awk '{print $5}')}"
@@ -33,25 +20,6 @@ PASSWORD_HASH="${PASSWORD_HASH}"
 WG_DEFAULT_ADDRESS="${WG_DEFAULT_ADDRESS:-10.8.0.x}"
 WG_MTU="${WG_MTU:-1420}"
 AMNEZIA_VERSION="${AMNEZIA_VERSION:-1.5}"
-
-# Генерация I1-I5 (CPS) — только для версий 2+
-if [ "$AMNEZIA_VERSION" = "2" ] || [ "$AMNEZIA_VERSION" = "2.0" ] || [ "$AMNEZIA_VERSION" = "3" ] || [ "$AMNEZIA_VERSION" = "3.0" ]; then
-for i in 1 2 3 4 5; do
-    var_name="I$i"
-    eval "current=\$$var_name"
-    # Only generate if var is NOT set in env. Empty string = user disabled it.
-    eval "is_set=\${${var_name}+x}"
-    if [ "$is_set" != "x" ] || [ "$current" = "0" ]; then
-        if [ $i -eq 1 ] || [ "${I_DNS_MIMIC_ALL:-false}" = "true" ]; then
-            new_val=$(generate_dns_mimic)
-        else
-            new_val=$(generate_cps)
-        fi
-        eval "$var_name=\"\$new_val\""
-        export "$var_name"
-    fi
-done
-fi
 
 # Параметры AWG 1.5 (mobile preset: Jc=3, narrow Jmin/Jmax)
 JC="${JC:-3}"
@@ -108,7 +76,7 @@ S4 = $S4
 EOF
         for i in 1 2 3 4 5; do
             eval "val=\$$(echo I$i)"
-            if [ -n "$val" ] && [ "$val" != "0" ]; then
+            if [ -n "$val" ] && [ "$val" != "0" ] && [ "$val" != "null" ]; then
                 echo "I$i = $val" >> "$CONFIG_PATH"
             fi
         done

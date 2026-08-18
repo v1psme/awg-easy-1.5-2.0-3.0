@@ -3136,6 +3136,87 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
     }
   }
 
+  __migrateMimicryProfile(config) {
+    // v2/v3: мимикрия CPS (I1-I5) через MIMICRY_PROFILE (dns|tls|quic|sip).
+    // I-значения — декои: их отправляет инициатор хендшейка, принимающая
+    // сторона не валидирует (must-match только S1-S4/H1-H4/HeaderProtectionKey).
+    // Ротация НЕ ломает существующих клиентов — переэкспорт нужен только
+    // чтобы применить новый профиль декоя клиентам.
+    const cfg = require('../config');
+    if (cfg.AMNEZIA_VERSION !== '2' && cfg.AMNEZIA_VERSION !== '3') {
+      return;
+    }
+
+    // Без единой MIMICRY_* в env — no-op: на существующих деплоях
+    // persisted I-значения не ротируются (обратная совместимость).
+    const MIMICRY_ENV_KEYS = ['MIMICRY_PROFILE', 'MIMICRY_BROWSER', 'MIMICRY_DOMAIN', 'MIMICRY_REGION', 'MIMICRY_ONLY_I1'];
+    if (MIMICRY_ENV_KEYS.every((k) => process.env[k] === undefined)) {
+      return;
+    }
+
+    const mimicry = require('../lib/mimicry');
+    const normI = (val) => (val === '' || val === '0' || val === 'null') ? '' : val;
+
+    // env-пины I1..I5 применяются всегда (прецедент HeaderProtectionKey env-pin)
+    for (let i = 1; i <= 5; i++) {
+      const envVal = process.env[`I${i}`];
+      if (envVal !== undefined) {
+        config.server[`i${i}`] = normI(envVal);
+      }
+    }
+
+    const stored = {
+      profile: config.server.mimicryProfile || 'dns',
+      browser: config.server.mimicryBrowser || 'chrome',
+      domain: config.server.mimicryDomain || '',
+      region: config.server.mimicryRegion || 'world',
+      onlyI1: !!config.server.mimicryOnlyI1,
+    };
+    const envTuple = {
+      profile: cfg.MIMICRY_PROFILE,
+      browser: cfg.MIMICRY_BROWSER,
+      domain: cfg.MIMICRY_DOMAIN,
+      region: cfg.MIMICRY_REGION,
+      onlyI1: cfg.MIMICRY_ONLY_I1,
+    };
+    const changed = stored.profile !== envTuple.profile
+      || stored.browser !== envTuple.browser
+      || stored.domain !== envTuple.domain
+      || stored.region !== envTuple.region
+      || stored.onlyI1 !== envTuple.onlyI1;
+    if (!changed) {
+      return;
+    }
+
+    // Профиль сменился (или первый запуск с MIMICRY_* env): регенерируем I1-I5.
+    // Поля с env-пином сохраняют значение пина (не перезаписываются).
+    const generated = mimicry.generateProfile({
+      profile: envTuple.profile,
+      browser: envTuple.browser,
+      domain: envTuple.domain,
+      region: envTuple.region,
+      onlyI1: envTuple.onlyI1,
+      dnsSites: cfg.DNS_SITES,
+      dnsMimicAll: process.env.I_DNS_MIMIC_ALL === 'true',
+      rMin: cfg.I_R_MIN,
+      rMax: cfg.I_R_MAX,
+    });
+    const gen = { i1: generated.i1, i2: generated.i2, i3: generated.i3, i4: generated.i4, i5: generated.i5 };
+    for (const [key, val] of Object.entries(gen)) {
+      const envVal = process.env[key.toUpperCase()];
+      if (envVal === undefined) {
+        config.server[key] = val;
+      }
+    }
+    config.server.mimicryProfile = envTuple.profile;
+    config.server.mimicryBrowser = envTuple.browser;
+    config.server.mimicryDomain = envTuple.domain;
+    config.server.mimicryRegion = envTuple.region;
+    config.server.mimicryOnlyI1 = envTuple.onlyI1;
+    // eslint-disable-next-line no-console
+    console.warn(`Mimicry profile changed to '${envTuple.profile}' (browser: ${envTuple.browser}, region: ${envTuple.region}) — existing clients unaffected (I-values are decoys); re-export client configs to apply the new profile`);
+  }
+
   async __initializeConfigUnlocked() {
     await this.__loadRuntimeSettings();
     const config = await this.__buildConfig();
@@ -3163,6 +3244,7 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
     }
 
     this.__migrateHeaderProtection(config);
+    this.__migrateMimicryProfile(config);
 
     await this.__saveConfig(config);
     await Util.exec('wg-quick down wg0').catch(() => {});
@@ -3407,10 +3489,18 @@ Endpoint = ${this.__resolvedWgHost}:${runtime.wgConfigPort}`;
 
   async getClientQRCodeSVG({ clientId }) {
     const config = await this.getClientConfiguration({ clientId });
-    return QRCode.toString(config, {
-      type: 'svg',
-      width: 512,
-    });
+    try {
+      return await QRCode.toString(config, {
+        type: 'svg',
+        width: 512,
+      });
+    } catch (err) {
+      // Конфиг с крупной мимикрией (QUIC I1 ~1200 байт и т.п.) превышает
+      // ёмкость QR-кода (~3KB) — отдаём понятную заглушку вместо 500.
+      debug(`QR code generation failed for client ${clientId}: ${err.message}`);
+      const message = 'QR unavailable: config too large (big CPS packets). Use .conf or .vpn download.';
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" fill="#0f1117"/><text x="256" y="256" fill="#c94040" font-size="20" text-anchor="middle">${message}</text></svg>`;
+    }
   }
 
   async getClientVpnKey({ clientId }) {

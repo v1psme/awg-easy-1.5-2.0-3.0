@@ -16,7 +16,7 @@ Fork of [wg-easy](https://github.com/wg-easy/wg-easy) with added support for **A
 
 ### VPN & Protocol
 - **AWG 1.5** — Jc, Jmin, Jmax, S1, S2, H1–H4 parameters
-- **AWG 2.0** — adds S3, S4, I1–I5 CPS (init packet signatures), I1 auto-generated as DNS-mimic
+- **AWG 2.0** — adds S3, S4, I1–I5 CPS (init packet signatures); mimicry profile via `MIMICRY_PROFILE=dns|tls|quic|sip` (default `dns`)
 - **AWG 3.0** — adds timers (RekeyAfterTime/RekeyTimeout/RejectAfterTime/KeepaliveTimeout/MaxHandshakeAttempts), ContentPaddingAddition, HeaderProtectionKey (on by default for v3; see client matrix below)
 - Auto-generated non-overlapping H1–H4 ranges (spread across uint32 space for v2+)
 - Auto S1/S2 with `S1+56 ≠ S2` constraint (Amnezia docs requirement)
@@ -248,13 +248,16 @@ All obfuscation parameters are auto-generated if not set. Override only if you n
 | `H2` | string | Magic header response packet |
 | `H3` | string | Magic header underload packet |
 | `H4` | string | Magic header transport packet |
-| `I1` | string | AWG 2.0+ init packet signature (auto: DNS-mimic) |
-| `I2`–`I5` | string | AWG 2.0+ additional CPS (auto: `<b 0xHEX><r N>`; empty = disabled) |
-| `I_R_MIN` | int | Min `<r>` value for I1–I5 (default: 2) |
-| `I_R_MAX` | int | Max `<r>` value for I1–I5 (default: 40 — see Known Issues) |
-| `I1_DNS_SITES` | string | Comma-separated domain list for I1 DNS-mimic (default: `icloud.com,google.com,nvidia.com`) |
-| `I1_DNS_NSLOOKUP` | bool | Use real DNS resolution for I1 domains |
-| `I_DNS_MIMIC_ALL` | bool | Generate I2–I5 also as DNS-mimic (`false` by default) |
+| `MIMICRY_PROFILE` | string | CPS mimicry profile for I1–I5: `dns` \| `tls` \| `quic` \| `sip` (default: `dns`) |
+| `MIMICRY_BROWSER` | string | TLS fingerprint: `chrome` \| `firefox` \| `safari` (default: `chrome`; for `tls`/`quic`) |
+| `MIMICRY_DOMAIN` | string | Explicit front domain (empty = random from region pool) |
+| `MIMICRY_REGION` | string | Front-domain pool: `world` \| `ru` (default: `world`) |
+| `MIMICRY_ONLY_I1` | bool | Generate only I1 (default `false` — all I1–I5) |
+| `I1`–`I5` | string | Explicit CPS values — always win over the profile (`''`/`0`/`null` = disabled) |
+| `I_R_MIN` | int | Min `<r>` value for DNS packets (default: 2) |
+| `I_R_MAX` | int | Max `<r>` value for DNS packets (default: 40 — see Known Issues) |
+| `I1_DNS_SITES` | string | Comma-separated domain list for the dns profile (default: `icloud.com,google.com,nvidia.com`) |
+| `I_DNS_MIMIC_ALL` | bool | dns-profile alias: I2–I5 also in DNS format (`false` by default) |
 
 ### 6. AWG 3.0 Parameters
 
@@ -326,9 +329,24 @@ Only active when `AMNEZIA_VERSION=3`. Values are ranges (`lo-hi`) or `(off)` to 
 | `<rd>` | `<rd N>` | ≤ 1000 | Random bytes + duplicate header |
 | `<t>` | — | — | **DO NOT USE** — causes handshake mismatch |
 
-- **I1** (default): DNS-mimic — `<r N><b 0xTXID+DNS_PAYLOAD>` with random domain from `I1_DNS_SITES`
-- **I2–I5** (default): `<b 0xHEX><r N>` — independent random lengths; empty env value disables each
-- **I_DNS_MIMIC_ALL=true**: I2–I5 also use DNS-mimic format
+### Mimicry Profiles (`MIMICRY_PROFILE`)
+
+I1–I5 are **decoys**: the handshake initiator sends them, the receiver never validates them.
+The must-match set between server and client is **S1–S4, H1–H4, HeaderProtectionKey** only.
+A profile change applies on restart (WireGuard.js migration): existing clients keep working,
+re-export configs only to apply the new decoy profile to clients.
+
+| Profile | Packet shape | I2–I5 |
+|---|---|---|
+| `dns` | DNS response with fake IP — `<r N><b 0xTXID+DNS_PAYLOAD>` (battle-proven; domains from `I1_DNS_SITES`) | `<b 0xHEX><r N>`; `I_DNS_MIMIC_ALL=true` → DNS format too |
+| `tls` | TLS 1.2 ClientHello `<b 0xHEX>` with browser fingerprint (Chrome: GREASE+ALPS; Firefox: NSS order, padded to 512 bytes; Safari: SecureTransport, TLS 1.1 in supported_versions) | random region-pool domains |
+| `quic` | QUIC v1 Initial `<b 0xHEX>` ~1200 bytes (CRYPTO frame with ClientHello, real RFC 9001 encryption) | I2 = second Initial, I3–I5 = short header |
+| `sip` | SIP REGISTER `<b 0xHEX>` (Via/From/To/Call-ID/User-Agent) | same domain |
+
+- **Explicit `I1`–`I5`** in env always win over the profile
+- **`MIMICRY_DOMAIN`** overrides the region pool (all profiles)
+- Large profiles (quic ~1200 bytes, firefox 512 bytes) may exceed QR capacity (~3 KB) —
+  the panel shows a placeholder; use `.conf`/`.vpn` instead
 
 ### Auto-Generation Notes
 
@@ -468,6 +486,7 @@ Only active when `AMNEZIA_VERSION=3`. Values are ranges (`lo-hi`) or `(off)` to 
 |---|---|---|
 | **HeaderProtectionKey (v3)** | ✅ Works | `.conf` for AmneziaWG 3.1+ (Android). For AmneziaVPN 5.0.0.5 use `.vpn`/`vpn://` only (JSON container). Enabling HPK invalidates existing client configs (must-match) — re-import required |
 | **I2–I5 stability** | ⚠️ Disabled | Periodically break handshake with some client builds. Disabled by default (empty in `.env`); use I1-only if issues appear |
+| **Large I packets** | ⚠️ Documented | QUIC I1 ~1200 bytes, Firefox I1 512 bytes: pumbaX experience — "mobile AWG does not always deliver (especially I5)". On mobile issues use `MIMICRY_ONLY_I1=true` or the `dns` profile |
 | **`<r>` limit** | ⚠️ Documented | Values above **40** break handshake (empirical, as of 2026-08-10). Controlled by `I_R_MIN=2`, `I_R_MAX=40` |
 | **`<t>` CPS tag** | ❌ Forbidden | Never use — injects per-packet timestamps that cause handshake mismatch |
 | **Manual iptables** | ⚠️ Required | Inter-server uplink tunnels need manual FORWARD + MASQUERADE rules after container restart (or use `WG_PRE_UP`/`WG_POST_UP` hooks) |

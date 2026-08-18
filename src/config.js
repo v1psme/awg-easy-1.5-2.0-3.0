@@ -15,68 +15,44 @@ const generateAmneziaSignature = () => {
     return `<r ${rValue}><b 0x${randomHex}>`;
 };
 
-// === Динамический DNS-mimic генератор ===
+// === Мимикрия CPS (dns|tls|quic|sip): генераторы в lib/mimicry.js ===
+const mimicry = require('./lib/mimicry');
+
+// Сайты для dns-профиля (историческая переменная I1_DNS_SITES)
 const DNS_SITES = (process.env.I1_DNS_SITES || 'icloud.com,google.com,nvidia.com').split(',').map(s => s.trim()).filter(Boolean);
-const DNS_NSLOOKUP = process.env.I1_DNS_NSLOOKUP === 'true';
+module.exports.DNS_SITES = DNS_SITES;
 
-const encodeDNSName = (name) => {
-    const parts = name.split('.');
-    const labels = parts.map(p => {
-        const len = Buffer.from([p.length]);
-        return Buffer.concat([len, Buffer.from(p)]);
-    });
-    return Buffer.concat([...labels, Buffer.from([0])]);
-};
+const MIMICRY_PROFILES = ['dns', 'tls', 'quic', 'sip'];
+const MIMICRY_BROWSERS = ['chrome', 'firefox', 'safari'];
 
-const generateRandomIP = () => {
-    const octets = Array.from({length: 4}, () => Math.floor(Math.random() * 223) + 1);
-    return octets.join('.');
-};
-
-const buildDNSMimic = (domain, ip) => {
-    const ipOctets = ip.split('.').map(Number);
-    const txid = require('crypto').randomBytes(2);
-    const encodedName = encodeDNSName(domain);
-    const header = Buffer.concat([txid, Buffer.from('0001000100000000', 'hex')]);
-    const question = Buffer.concat([encodedName, Buffer.from('00010001', 'hex')]);
-    const answer = Buffer.concat([
-        Buffer.from('c00c000100010000105a0004', 'hex'),
-        Buffer.from(ipOctets)
-    ]);
-    const rMin = parseInt(process.env.I_R_MIN, 10) || 2;
-    const rMax = parseInt(process.env.I_R_MAX, 10) || 40;
-    // По состоянию на 10.08.2026: r > 40 ломает handshake
-    const rLen = rMin + Math.floor(Math.random() * (rMax - rMin + 1));
-    const payload = Buffer.concat([header, question, answer]).toString('hex');
-    return `<r ${rLen}><b 0x${payload}>`;
-};
-
-const generateDNSMimic = () => {
-    const domain = DNS_SITES[Math.floor(Math.random() * DNS_SITES.length)];
-    const ip = generateRandomIP();
-    return buildDNSMimic(domain, ip);
-};
-
-// Async DNS resolution: call after server starts to update I1 with real IPs
-const initDNSMimic = async () => {
-    if (!DNS_NSLOOKUP) return;
-    const { resolve4 } = require('dns').promises;
-    for (let i = 0; i < DNS_SITES.length; i++) {
-        try {
-            const addrs = await resolve4(DNS_SITES[i]);
-            if (addrs[0]) {
-                // Cache one real IP, done
-                const cachedIP = addrs[0];
-                const cachedDomain = DNS_SITES[i];
-                const origGenerate = generateDNSMimic;
-                // Override for subsequent calls to prefer real IPs
-                module.exports.__getCachedDNS = () => ({ domain: cachedDomain, ip: cachedIP });
-                break;
-            }
-        } catch {}
+const MIMICRY_PROFILE = (() => {
+    const v = (process.env.MIMICRY_PROFILE || 'dns').toLowerCase();
+    if (!MIMICRY_PROFILES.includes(v)) {
+        // eslint-disable-next-line no-console
+        console.warn(`MIMICRY_PROFILE: unknown profile '${v}', fallback to 'dns'`);
+        return 'dns';
     }
-};
-// === Конец DNS-mimic генератора ===
+    return v;
+})();
+const MIMICRY_BROWSER = (() => {
+    const v = (process.env.MIMICRY_BROWSER || 'chrome').toLowerCase();
+    if (!MIMICRY_BROWSERS.includes(v)) {
+        // eslint-disable-next-line no-console
+        console.warn(`MIMICRY_BROWSER: unknown browser '${v}', fallback to 'chrome'`);
+        return 'chrome';
+    }
+    return v;
+})();
+const MIMICRY_DOMAIN = (process.env.MIMICRY_DOMAIN || '').trim();
+const MIMICRY_REGION = process.env.MIMICRY_REGION === 'ru' ? 'ru' : 'world';
+const MIMICRY_ONLY_I1 = process.env.MIMICRY_ONLY_I1 === 'true';
+
+module.exports.MIMICRY_PROFILE = MIMICRY_PROFILE;
+module.exports.MIMICRY_BROWSER = MIMICRY_BROWSER;
+module.exports.MIMICRY_DOMAIN = MIMICRY_DOMAIN;
+module.exports.MIMICRY_REGION = MIMICRY_REGION;
+module.exports.MIMICRY_ONLY_I1 = MIMICRY_ONLY_I1;
+// === Конец блока мимикрии ===
 
 // AMNEZIA_VERSION: выбор версии обфускации (1.5, 2, 3)
 const AMNEZIA_VERSION = (() => {
@@ -333,28 +309,36 @@ if (isAwg2Plus()) {
     module.exports.S3 = process.env.S3 || getRandomInt(8, 55);
     module.exports.S4 = process.env.S4 || getRandomInt(4, 27);
 
-    // I1: DNS-mimic по умолчанию (маскировка под DNS-ответ)
-    // Формат: <r 2><b 0xTXID+DNS_PAYLOAD>
-    module.exports.I1 = (process.env.I1 !== undefined) ? (process.env.I1 || '') : generateDNSMimic();
+    // I1-I5: профиль мимикрии из MIMICRY_PROFILE (dns|tls|quic|sip).
+    // Явные I1..I5 в env всегда побеждают (''/'0'/'null' = отключено).
+    const normI = (val) => (val === '' || val === '0' || val === 'null') ? '' : val;
+    const envI = (n) => (process.env[n] !== undefined) ? normI(process.env[n]) : undefined;
 
-    // I2-I5: <b 0xHEX><r N> (без <rc>), или DNS-mimic если I_DNS_MIMIC_ALL=true
     const rMin = parseInt(process.env.I_R_MIN, 10) || 2;
     const rMax = parseInt(process.env.I_R_MAX, 10) || 40;
     // По состоянию на 10.08.2026: r > 40 ломает handshake
-    const randomR = () => rMin + Math.floor(Math.random() * (rMax - rMin + 1));
+    module.exports.I_R_MIN = rMin;
+    module.exports.I_R_MAX = rMax;
     const dnsMimicAll = process.env.I_DNS_MIMIC_ALL === 'true';
-    const genIx = () => dnsMimicAll ? generateDNSMimic() : ('<b 0x' + require('crypto').randomBytes(16).toString('hex') + '><r ' + randomR() + '>');
-    module.exports.I2 = (process.env.I2 !== undefined) ? (process.env.I2 || '') : genIx();
-    module.exports.I3 = (process.env.I3 !== undefined) ? (process.env.I3 || '') : genIx();
-    module.exports.I4 = (process.env.I4 !== undefined) ? (process.env.I4 || '') : genIx();
-    module.exports.I5 = (process.env.I5 !== undefined) ? (process.env.I5 || '') : genIx();
 
-    // Если в env явно задана пустая строка — возвращаем пустую строку
-    // (шаблон WireGuard.js отфильтрует пустые значения)
-    if (process.env.I2 === '') module.exports.I2 = '';
-    if (process.env.I3 === '') module.exports.I3 = '';
-    if (process.env.I4 === '') module.exports.I4 = '';
-    if (process.env.I5 === '') module.exports.I5 = '';
+    // I_DNS_MIMIC_ALL = alias dns-профиля (I2-I5 тоже в DNS-формате);
+    // работает только для dns. MIMICRY_ONLY_I1 ограничительнее и побеждает.
+    const generated = mimicry.generateProfile({
+        profile: MIMICRY_PROFILE,
+        browser: MIMICRY_BROWSER,
+        domain: MIMICRY_DOMAIN,
+        region: MIMICRY_REGION,
+        onlyI1: MIMICRY_ONLY_I1,
+        dnsSites: DNS_SITES,
+        dnsMimicAll,
+        rMin,
+        rMax,
+    });
+    module.exports.I1 = envI('I1') !== undefined ? envI('I1') : generated.i1;
+    module.exports.I2 = envI('I2') !== undefined ? envI('I2') : generated.i2;
+    module.exports.I3 = envI('I3') !== undefined ? envI('I3') : generated.i3;
+    module.exports.I4 = envI('I4') !== undefined ? envI('I4') : generated.i4;
+    module.exports.I5 = envI('I5') !== undefined ? envI('I5') : generated.i5;
 
     // AWG 3.0: Header Protection + таймеры
     if (isAwg3()) {
