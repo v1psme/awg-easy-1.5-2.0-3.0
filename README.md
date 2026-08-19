@@ -248,9 +248,12 @@ All obfuscation parameters are auto-generated if not set. Override only if you n
 | `H2` | string | Magic header response packet |
 | `H3` | string | Magic header underload packet |
 | `H4` | string | Magic header transport packet |
-| `MIMICRY_PROFILE` | string | CPS mimicry profile for I1–I5: `dns` \| `tls` \| `quic` \| `sip` (default: `dns`) |
+| `MIMICRY_PROFILE` | string | CPS mimicry profile for I1–I5: `dns` \| `tls` \| `quic` \| `sip` (default: `dns`). With `tls`/`quic`, I1 gets tls/quic and I2–I5 = dns |
+| `MIMICRY_PROFILE_I1` | string | Profile for I1: `dns` \| `tls` \| `quic` \| `sip` (per-I, beats the global profile) |
+| `MIMICRY_PROFILE_I2`–`MIMICRY_PROFILE_I5` | string | Profile for I2–I5: **only `dns` \| `sip`** — QUIC/TLS are I1-only (tls/quic → clamped to dns + warning) |
 | `MIMICRY_BROWSER` | string | TLS fingerprint: `chrome` \| `firefox` \| `safari` (default: `chrome`; for `tls`/`quic`) |
-| `MIMICRY_DOMAIN` | string | Explicit front domain (empty = random from region pool) |
+| `MIMICRY_BROWSER_I1` | string | TLS fingerprint for I1 specifically (fallback: `MIMICRY_BROWSER`) |
+| `MIMICRY_DOMAIN` | string | Explicit front domain (empty = `yandex.ru` for region=ru, else `yandex.com`) |
 | `MIMICRY_REGION` | string | Front-domain pool: `world` \| `ru` (default: `world`) |
 | `MIMICRY_ONLY_I1` | bool | Generate only I1 (default `false` — all I1–I5) |
 | `I1`–`I5` | string | Explicit CPS values — always win over the profile (`''`/`0`/`null` = disabled) |
@@ -261,18 +264,24 @@ All obfuscation parameters are auto-generated if not set. Override only if you n
 
 ### 6. AWG 3.0 Parameters
 
-Only active when `AMNEZIA_VERSION=3`. Values are ranges (`lo-hi`) or `(off)` to disable.
+Only active when `AMNEZIA_VERSION=3`. Format: `N` or `LO-HI` (uint16, HI ≥ LO).
 
 | Variable | Default | Description |
 |---|---|---|
 | `HEADER_PROTECTION_KEY_ENABLE` | `true` (v3) | Header protection: on by default for v3, `false` to disable |
 | `HEADER_PROTECTION_KEY` | auto | 44-char base64 key pin. Empty → generated once on first boot and persisted (stable across restarts). Changing it rotates the key: all clients must re-import configs |
-| `CONTENT_PADDING_ADDITION` | `16-128` | Content padding range, or `(off)` |
-| `REKEY_AFTER_TIME` | `100-145` | Rekey-after time range, or `(off)` |
-| `REKEY_TIMEOUT` | `4-10` | Rekey timeout range, or `(off)` |
-| `REJECT_AFTER_TIME` | `180-200` | Reject-after time range, or `(off)` |
-| `KEEPALIVE_TIMEOUT` | `8-22` | Keepalive timeout range, or `(off)` |
-| `MAX_HANDSHAKE_ATTEMPTS` | `12-28` | Max handshake attempts range, or `(off)` |
+| `CONTENT_PADDING_ADDITION` | **auto-random** | Content padding. Unset → generated randomly once on first boot (`8-24`–`48-96` bytes) and persisted |
+| `REKEY_AFTER_TIME` | **auto-random** | Rekey-after time. Random around the 120s protocol default: `110-125`–`140-160` |
+| `REKEY_TIMEOUT` | **auto-random** | Rekey timeout. Range `4-10` (around the 5s default) |
+| `REJECT_AFTER_TIME` | **auto-random** | Reject-after time. Random around 180s: `175-190`–`200-215`, always `> RekeyAfterTime` |
+| `KEEPALIVE_TIMEOUT` | **auto-random** | Keepalive timeout. Random around 10s: `9-14`–`20-30` |
+| `MAX_HANDSHAKE_ATTEMPTS` | **auto-random** | Max handshake attempts. Random `16-20` (around the 18 default) |
+
+Ranges are generated per the Amnezia 3.0 docs: `u16_range` format (`"N"` or `"LO-HI"`), the
+daemon picks a random value inside the range (`UintRange.PickOne`). The invariant
+**RejectAfterTime > RekeyAfterTime** always holds. An env pin of `(off)` removes the
+field (protocol default) — the amneziawg parser itself does not implement `(off)`.
+Timers are not must-match: changing them does not break clients; re-export to sync.
 
 ### 7. Traffic History
 
@@ -339,12 +348,18 @@ re-export configs only to apply the new decoy profile to clients.
 | Profile | Packet shape | I2–I5 |
 |---|---|---|
 | `dns` | DNS response with fake IP — `<r N><b 0xTXID+DNS_PAYLOAD>` (battle-proven; domains from `I1_DNS_SITES`) | `<b 0xHEX><r N>`; `I_DNS_MIMIC_ALL=true` → DNS format too |
-| `tls` | TLS 1.2 ClientHello `<b 0xHEX>` with browser fingerprint (Chrome: GREASE+ALPS; Firefox: NSS order, padded to 512 bytes; Safari: SecureTransport, TLS 1.1 in supported_versions) | random region-pool domains |
-| `quic` | QUIC v1 Initial `<b 0xHEX>` ~1200 bytes (CRYPTO frame with ClientHello, real RFC 9001 encryption) | I2 = second Initial, I3–I5 = short header |
+| `tls` | TLS 1.2 ClientHello `<b 0xHEX>` with browser fingerprint (Chrome: GREASE+ALPS; Firefox: NSS order, padded to 512 bytes; Safari: SecureTransport, TLS 1.1 in supported_versions) | — (I1 only) |
+| `quic` | QUIC v1 Initial `<b 0xHEX>` ~1200 bytes (CRYPTO frame with ClientHello, real RFC 9001 encryption) | — (I1 only) |
 | `sip` | SIP REGISTER `<b 0xHEX>` (Via/From/To/Call-ID/User-Agent) | same domain |
 
+**QUIC/TLS are I1-only, always.** I2–I5 can only be `dns`/`sip`:
+- global `MIMICRY_PROFILE=tls|quic` → I1 = tls/quic, I2–I5 = **dns**
+- per-I `MIMICRY_PROFILE_I2..I5=tls|quic` → clamped to `dns` + warning in the log
+- `MIMICRY_PROFILE_I1` sets the I1 profile specifically (beats the global one);
+  `MIMICRY_BROWSER_I1` sets the I1 fingerprint (fallback: `MIMICRY_BROWSER`)
+
 - **Explicit `I1`–`I5`** in env always win over the profile
-- **`MIMICRY_DOMAIN`** overrides the region pool (all profiles)
+- **`MIMICRY_DOMAIN`** overrides the region pool (all profiles); unset → `yandex.ru` (region=ru) / `yandex.com`
 - Large profiles (quic ~1200 bytes, firefox 512 bytes) may exceed QR capacity (~3 KB) —
   the panel shows a placeholder; use `.conf`/`.vpn` instead
 

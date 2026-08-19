@@ -465,11 +465,36 @@ const genSip = (domain) => {
 // === Profile dispatch ===
 // Returns {i1..i5}: CPS strings in the project's conf format. Empty strings
 // are omitted from the .conf by the template (project convention).
+
+// Один CPS-пакет для одного профиля (per-I генерация).
+// Domain rule: dns → explicit MIMICRY_DOMAIN или случайный из dnsSites;
+// tls/quic/sip → explicit MIMICRY_DOMAIN → defaultDomain (yandex) → пул региона.
+const genOne = (p, o) => {
+    switch (p) {
+    case 'tls': {
+        const host = o.explicitDomain || o.defaultDomain || rc(domainPool('tls', o.region));
+        return toCps(genTlsClientHello(host, o.browser));
+    }
+    case 'quic': {
+        const host = o.explicitDomain || o.defaultDomain || rc(domainPool('quic', o.region));
+        return toCps(genQuicInitial(host, o.browser).packet);
+    }
+    case 'sip': {
+        const host = o.explicitDomain || o.defaultDomain || rc(SIP_DOMAINS);
+        return toCps(genSip(host));
+    }
+    default: { // dns — проверенный формат DNS-ответа (buildDNSMimic)
+        const dnsPkt = (d) => buildDNSMimic(d, generateRandomIP(), { rMin: o.rMin, rMax: o.rMax });
+        return dnsPkt(o.explicitDomain || rc(o.dnsSites));
+    }
+    }
+};
 const generateProfile = (opts = {}) => {
     const profile = opts.profile || 'dns';
     const browser = opts.browser || 'chrome';
     const region = opts.region || 'world';
     const explicitDomain = opts.domain || '';
+    const defaultDomain = opts.defaultDomain || '';
     const onlyI1 = !!opts.onlyI1;
     const dnsSites = (opts.dnsSites && opts.dnsSites.length)
         ? opts.dnsSites : DNS_DOMAINS_WORLD;
@@ -478,10 +503,25 @@ const generateProfile = (opts = {}) => {
     const rMax = opts.rMax || 40;
     const empty = { i1: '', i2: '', i3: '', i4: '', i5: '' };
 
+    // per-I режим: каждый I генерируется своим профилем (perI[i] или глобальный).
+    // QUIC/TLS допустимы только для I1 — валидация per-I значений лежит на
+    // вызывающем (config.js clamp'ит tls/quic → dns для I2-I5).
+    // dnsMimicAll под perI игнорируется: per-I dns всегда полный DNS-формат.
+    const perI = opts.perI;
+    if (perI && typeof perI === 'object') {
+        const out = { ...empty };
+        for (let i = 1; i <= 5; i++) {
+            if (onlyI1 && i > 1) continue;
+            const p = perI[i] || profile;
+            out[`i${i}`] = genOne(p, { explicitDomain, defaultDomain, region, browser, dnsSites, rMin, rMax });
+        }
+        return out;
+    }
+
     switch (profile) {
     case 'tls': {
         const pool = domainPool('tls', region);
-        const host = explicitDomain || rc(pool);
+        const host = explicitDomain || defaultDomain || rc(pool);
         const i1 = toCps(genTlsClientHello(host, browser));
         if (onlyI1) return { ...empty, i1 };
         const mk = () => toCps(genTlsClientHello(rc(pool), browser));
@@ -496,7 +536,7 @@ const generateProfile = (opts = {}) => {
         return { i1, i2: mk(), i3: mk(), i4: mk(), i5: mk() };
     }
     case 'sip': {
-        const host = explicitDomain || rc(SIP_DOMAINS);
+        const host = explicitDomain || defaultDomain || rc(SIP_DOMAINS);
         const i1 = toCps(genSip(host));
         if (onlyI1) return { ...empty, i1 };
         // All five on the same domain (profile convention)
@@ -504,7 +544,7 @@ const generateProfile = (opts = {}) => {
     }
     case 'quic': {
         const pool = domainPool('quic', region);
-        const host = explicitDomain || rc(pool);
+        const host = explicitDomain || defaultDomain || rc(pool);
         const init = genQuicInitial(host, browser);
         const i1 = toCps(init.packet);
         if (onlyI1) return { ...empty, i1 };

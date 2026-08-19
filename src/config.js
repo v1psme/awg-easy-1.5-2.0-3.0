@@ -24,34 +24,103 @@ module.exports.DNS_SITES = DNS_SITES;
 
 const MIMICRY_PROFILES = ['dns', 'tls', 'quic', 'sip'];
 const MIMICRY_BROWSERS = ['chrome', 'firefox', 'safari'];
+// QUIC/TLS — только для I1, всегда: I2-I5 ограничены dns|sip
+const MIMICRY_I1_PROFILES = MIMICRY_PROFILES;
+const MIMICRY_I2_5_PROFILES = ['dns', 'sip'];
 
-const MIMICRY_PROFILE = (() => {
-    const v = (process.env.MIMICRY_PROFILE || 'dns').toLowerCase();
-    if (!MIMICRY_PROFILES.includes(v)) {
-        // eslint-disable-next-line no-console
-        console.warn(`MIMICRY_PROFILE: unknown profile '${v}', fallback to 'dns'`);
-        return 'dns';
-    }
-    return v;
-})();
-const MIMICRY_BROWSER = (() => {
-    const v = (process.env.MIMICRY_BROWSER || 'chrome').toLowerCase();
-    if (!MIMICRY_BROWSERS.includes(v)) {
-        // eslint-disable-next-line no-console
-        console.warn(`MIMICRY_BROWSER: unknown browser '${v}', fallback to 'chrome'`);
-        return 'chrome';
-    }
-    return v;
-})();
-const MIMICRY_DOMAIN = (process.env.MIMICRY_DOMAIN || '').trim();
-const MIMICRY_REGION = process.env.MIMICRY_REGION === 'ru' ? 'ru' : 'world';
-const MIMICRY_ONLY_I1 = process.env.MIMICRY_ONLY_I1 === 'true';
+/**
+ * Разрешить mimicry env в план генерации. Чистая функция: env передаётся
+ * аргументом (для тестов), process.env не читает.
+ * Правила:
+ *  - MIMICRY_PROFILE_I1..I5 — per-I профили; I1: dns|tls|quic|sip,
+ *    I2-I5: только dns|sip (tls/quic/unknown → clamp к dns + warning)
+ *  - глобальный MIMICRY_PROFILE=tls|quic → I1 = tls/quic, I2-I5 = dns
+ *  - MIMICRY_BROWSER_I1 — браузер I1 (fallback: MIMICRY_BROWSER)
+ *  - MIMICRY_DOMAIN не задан → defaultDomain: yandex.ru (region=ru) / yandex.com
+ * @param {Record<string, string|undefined>} env
+ * @returns {{profile:string, browser:string, browserI1:string, domain:string,
+ *            region:string, onlyI1:boolean, defaultDomain:string,
+ *            perI: {1..5:string}|undefined, warnings:string[]}}
+ */
+const resolveMimicryPlan = (env = {}) => {
+    const warnings = [];
+    const norm = (v) => (v === undefined || v === null) ? '' : String(v).toLowerCase().trim();
+    const region = norm(env.MIMICRY_REGION) === 'ru' ? 'ru' : 'world';
+    const defaultDomain = region === 'ru' ? 'yandex.ru' : 'yandex.com';
 
-module.exports.MIMICRY_PROFILE = MIMICRY_PROFILE;
-module.exports.MIMICRY_BROWSER = MIMICRY_BROWSER;
-module.exports.MIMICRY_DOMAIN = MIMICRY_DOMAIN;
-module.exports.MIMICRY_REGION = MIMICRY_REGION;
-module.exports.MIMICRY_ONLY_I1 = MIMICRY_ONLY_I1;
+    let profile = norm(env.MIMICRY_PROFILE) || 'dns';
+    if (!MIMICRY_PROFILES.includes(profile)) {
+        warnings.push(`MIMICRY_PROFILE: unknown profile '${profile}', fallback to 'dns'`);
+        profile = 'dns';
+    }
+    let browser = norm(env.MIMICRY_BROWSER) || 'chrome';
+    if (!MIMICRY_BROWSERS.includes(browser)) {
+        warnings.push(`MIMICRY_BROWSER: unknown browser '${browser}', fallback to 'chrome'`);
+        browser = 'chrome';
+    }
+    // Браузер I1: MIMICRY_BROWSER_I1 бьёт глобальный (валиден только он: I1 — единственный,
+    // где допустимы tls/quic)
+    let browserI1 = browser;
+    if (norm(env.MIMICRY_BROWSER_I1) !== '') {
+        if (MIMICRY_BROWSERS.includes(norm(env.MIMICRY_BROWSER_I1))) {
+            browserI1 = norm(env.MIMICRY_BROWSER_I1);
+        } else {
+            warnings.push(`MIMICRY_BROWSER_I1: unknown browser '${norm(env.MIMICRY_BROWSER_I1)}', fallback to '${browser}'`);
+        }
+    }
+    const domain = norm(env.MIMICRY_DOMAIN);
+    const onlyI1 = env.MIMICRY_ONLY_I1 === 'true';
+
+    // per-I профили: явные значения ('' = не задан)
+    const perIExplicit = {};
+    let perIActive = false;
+    for (let i = 1; i <= 5; i++) {
+        const raw = norm(env[`MIMICRY_PROFILE_I${i}`]);
+        if (raw === '') { perIExplicit[i] = ''; continue; }
+        perIActive = true;
+        if (i === 1) {
+            if (MIMICRY_I1_PROFILES.includes(raw)) {
+                perIExplicit[i] = raw;
+            } else {
+                warnings.push(`MIMICRY_PROFILE_I1: unknown profile '${raw}', fallback to 'dns'`);
+                perIExplicit[i] = 'dns';
+            }
+        } else if (MIMICRY_I2_5_PROFILES.includes(raw)) {
+            perIExplicit[i] = raw;
+        } else {
+            warnings.push(`MIMICRY_PROFILE_I${i}: '${raw}' not allowed for I2-I5 (dns|sip only, QUIC/TLS are I1-only) — clamped to 'dns'`);
+            perIExplicit[i] = 'dns';
+        }
+    }
+
+    // Итоговая карта генерации: per-I явное > глобальный профиль;
+    // глобальный tls/quic даёт I2-I5 = dns (QUIC/TLS — только для I1)
+    const resolvedIndex = (i) => {
+        if (perIExplicit[i] !== '') return perIExplicit[i];
+        if (i >= 2 && (profile === 'tls' || profile === 'quic')) return 'dns';
+        return profile;
+    };
+    const perI = (perIActive || profile === 'tls' || profile === 'quic')
+        ? { 1: resolvedIndex(1), 2: resolvedIndex(2), 3: resolvedIndex(3), 4: resolvedIndex(4), 5: resolvedIndex(5) }
+        : undefined;
+
+    return { profile, browser, browserI1, domain, region, onlyI1, defaultDomain, perI, warnings };
+};
+module.exports.resolveMimicryPlan = resolveMimicryPlan;
+
+const _mimicryPlan = resolveMimicryPlan(process.env);
+for (const w of _mimicryPlan.warnings) {
+    // eslint-disable-next-line no-console
+    console.warn(w);
+}
+module.exports.MIMICRY_PROFILE = _mimicryPlan.profile;
+module.exports.MIMICRY_BROWSER = _mimicryPlan.browser;
+module.exports.MIMICRY_BROWSER_I1 = _mimicryPlan.browserI1;
+module.exports.MIMICRY_DOMAIN = _mimicryPlan.domain;
+module.exports.MIMICRY_REGION = _mimicryPlan.region;
+module.exports.MIMICRY_ONLY_I1 = _mimicryPlan.onlyI1;
+module.exports.MIMICRY_DEFAULT_DOMAIN = _mimicryPlan.defaultDomain;
+module.exports.MIMICRY_PLAN = _mimicryPlan;
 // === Конец блока мимикрии ===
 
 // AMNEZIA_VERSION: выбор версии обфускации (1.5, 2, 3)
@@ -309,7 +378,7 @@ if (isAwg2Plus()) {
     module.exports.S3 = process.env.S3 || getRandomInt(8, 55);
     module.exports.S4 = process.env.S4 || getRandomInt(4, 27);
 
-    // I1-I5: профиль мимикрии из MIMICRY_PROFILE (dns|tls|quic|sip).
+    // I1-I5: профиль мимикрии из resolveMimicryPlan (глобальный + per-I).
     // Явные I1..I5 в env всегда побеждают (''/'0'/'null' = отключено).
     const normI = (val) => (val === '' || val === '0' || val === 'null') ? '' : val;
     const envI = (n) => (process.env[n] !== undefined) ? normI(process.env[n]) : undefined;
@@ -322,13 +391,15 @@ if (isAwg2Plus()) {
     const dnsMimicAll = process.env.I_DNS_MIMIC_ALL === 'true';
 
     // I_DNS_MIMIC_ALL = alias dns-профиля (I2-I5 тоже в DNS-формате);
-    // работает только для dns. MIMICRY_ONLY_I1 ограничительнее и побеждает.
+    // работает только в legacy-пути dns-профиля (под perI игнорируется).
     const generated = mimicry.generateProfile({
-        profile: MIMICRY_PROFILE,
-        browser: MIMICRY_BROWSER,
-        domain: MIMICRY_DOMAIN,
-        region: MIMICRY_REGION,
-        onlyI1: MIMICRY_ONLY_I1,
+        profile: _mimicryPlan.profile,
+        perI: _mimicryPlan.perI,
+        browser: _mimicryPlan.browserI1,
+        domain: _mimicryPlan.domain,
+        defaultDomain: _mimicryPlan.defaultDomain,
+        region: _mimicryPlan.region,
+        onlyI1: _mimicryPlan.onlyI1,
         dnsSites: DNS_SITES,
         dnsMimicAll,
         rMin,
@@ -355,12 +426,38 @@ if (isAwg2Plus()) {
         module.exports.HEADER_PROTECTION_KEY_ENABLE = process.env.HEADER_PROTECTION_KEY_ENABLE !== 'false';
         module.exports.HEADER_PROTECTION_KEY = process.env.HEADER_PROTECTION_KEY || '';
 
-        // Таймеры и padding — все в формате диапазона "lo-hi" или "(off)"
-        module.exports.CONTENT_PADDING_ADDITION = process.env.CONTENT_PADDING_ADDITION || '16-128';
-        module.exports.REKEY_AFTER_TIME = process.env.REKEY_AFTER_TIME || '100-145';
-        module.exports.REKEY_TIMEOUT = process.env.REKEY_TIMEOUT || '4-10';
-        module.exports.REJECT_AFTER_TIME = process.env.REJECT_AFTER_TIME || '180-200';
-        module.exports.KEEPALIVE_TIMEOUT = process.env.KEEPALIVE_TIMEOUT || '8-22';
-        module.exports.MAX_HANDSHAKE_ATTEMPTS = process.env.MAX_HANDSHAKE_ATTEMPTS || '12-28';
+        // Таймеры и padding: env-пин ("N"/"LO-HI") или рандомная генерация
+        // по протокольным дефолтам Amnezia 3.0 (lib/awg3-timers.js).
+        // "(off)" → '' (поле убирается = протокольный дефолт; парсеры
+        // amneziawg "(off)" не поддерживают). Невалидный пин → warn + рандом.
+        const awg3Timers = require('./lib/awg3-timers');
+        const generatedTimers = awg3Timers.generateAwg3Timers();
+        const timerFromEnv = (envKey, generated) => {
+            const raw = process.env[envKey];
+            if (raw === undefined || raw === '') return generated;
+            const v = awg3Timers.normalizeU16Range(raw);
+            if (v !== null) return v;
+            // eslint-disable-next-line no-console
+            console.warn(`${envKey}: invalid value '${raw}' (expected "N", "LO-HI" or "(off)") — using generated ${generated}`);
+            return generated;
+        };
+        module.exports.CONTENT_PADDING_ADDITION = timerFromEnv('CONTENT_PADDING_ADDITION', generatedTimers.contentPaddingAddition);
+        module.exports.REKEY_AFTER_TIME = timerFromEnv('REKEY_AFTER_TIME', generatedTimers.rekeyAfterTime);
+        module.exports.REKEY_TIMEOUT = timerFromEnv('REKEY_TIMEOUT', generatedTimers.rekeyTimeout);
+        module.exports.REJECT_AFTER_TIME = timerFromEnv('REJECT_AFTER_TIME', generatedTimers.rejectAfterTime);
+        module.exports.KEEPALIVE_TIMEOUT = timerFromEnv('KEEPALIVE_TIMEOUT', generatedTimers.keepaliveTimeout);
+        module.exports.MAX_HANDSHAKE_ATTEMPTS = timerFromEnv('MAX_HANDSHAKE_ATTEMPTS', generatedTimers.maxHandshakeAttempts);
+
+        // Инвариант RejectAfterTime > RekeyAfterTime: для сгенерированных значений
+        // гарантирован генератором; для явных пинов — только предупреждение.
+        if (process.env.REJECT_AFTER_TIME !== undefined && process.env.REKEY_AFTER_TIME !== undefined) {
+            const loOf = (s) => Number(String(s).split('-')[0]);
+            const rekeyHi = Number(String(module.exports.REKEY_AFTER_TIME).split('-')[1]);
+            if (Number.isFinite(loOf(module.exports.REJECT_AFTER_TIME)) && Number.isFinite(rekeyHi)
+                && loOf(module.exports.REJECT_AFTER_TIME) <= rekeyHi) {
+                // eslint-disable-next-line no-console
+                console.warn('REJECT_AFTER_TIME <= REKEY_AFTER_TIME — session will be rejected before rekey (Amnezia invariant violated by env pins)');
+            }
+        }
     }
 }

@@ -53,6 +53,11 @@ const hexOf = (cps) => {
     assert.ok(m, `expected <b 0xHEX> format, got: ${cps.slice(0, 40)}...`);
     return Buffer.from(m[1], 'hex');
 };
+const dnsHexOf = (cps) => {
+    const m = cps.match(/^<r \d+><b 0x([0-9a-f]+)>$/);
+    assert.ok(m, `expected DNS <r N><b 0xHEX> format, got: ${cps.slice(0, 40)}...`);
+    return Buffer.from(m[1], 'hex');
+};
 
 // === DNS ===
 
@@ -227,4 +232,69 @@ test('generateProfile tls: explicit domain wins, region pools respected', () => 
 test('generateProfile: unknown profile falls back to dns', () => {
     const r = mimicry.generateProfile({ profile: 'bogus' });
     assert.match(r.i1, /^<r \d+><b 0x[0-9a-f]+>$/, 'dns format fallback');
+});
+
+// === per-I генерация ===
+
+// DNS-вопрос в пакете: encoded name в hex (для 'icloud.com' → 0769636c6f756403636f6d00)
+const dnsNameHex = (name) => name.split('.')
+    .map((l) => Buffer.from([l.length]).toString('hex') + Buffer.from(l).toString('hex'))
+    .join('') + '00';
+
+test('generateProfile perI: each I its own profile, missing fall back to global', () => {
+    const r = mimicry.generateProfile({
+        profile: 'dns', perI: { 1: 'quic', 2: 'dns', 3: 'sip' },
+        dnsSites: ['icloud.com'], rMin: 2, rMax: 40,
+    });
+    assert.equal(hexOf(r.i1).length, 1200, 'I1 QUIC Initial');
+    assert.match(r.i2, /^<r \d+><b 0x[0-9a-f]+>$/, 'I2 full DNS format (per-I dns)');
+    assert.ok(dnsHexOf(r.i2).toString('hex').includes(dnsNameHex('icloud.com')), 'I2 DNS question from dnsSites');
+    assert.equal(hexOf(r.i3).toString('ascii').slice(0, 8), 'REGISTER', 'I3 SIP');
+    assert.match(r.i4, /^<r \d+><b 0x[0-9a-f]+>$/, 'I4 falls back to global dns');
+    assert.match(r.i5, /^<r \d+><b 0x[0-9a-f]+>$/, 'I5 falls back to global dns');
+});
+
+test('generateProfile perI: dnsMimicAll ignored — per-I dns always full DNS format', () => {
+    const r = mimicry.generateProfile({
+        profile: 'dns', perI: { 2: 'dns' }, dnsMimicAll: false,
+        dnsSites: ['icloud.com'], rMin: 2, rMax: 40,
+    });
+    assert.match(r.i2, /^<r \d+><b 0x[0-9a-f]+>$/, 'not the junk <b 0xHEX><r N> variant');
+    assert.ok(!/^<b 0x[0-9a-f]{32}><r \d+>$/.test(r.i2), 'full DNS format even without dnsMimicAll');
+});
+
+test('generateProfile perI: onlyI1 empties I2-I5 in per-I mode too', () => {
+    const r = mimicry.generateProfile({ profile: 'dns', perI: { 2: 'sip' }, onlyI1: true });
+    assert.notEqual(r.i1, '');
+    assert.equal(r.i2, '');
+    assert.equal(r.i3, '');
+    assert.equal(r.i4, '');
+    assert.equal(r.i5, '');
+});
+
+test('generateProfile perI: explicit domain wins for per-I dns', () => {
+    const r = mimicry.generateProfile({
+        profile: 'dns', perI: { 2: 'dns' }, domain: 'custom.example', rMin: 2, rMax: 40,
+    });
+    assert.ok(dnsHexOf(r.i2).toString('hex').includes(dnsNameHex('custom.example')),
+        'per-I dns uses explicit MIMICRY_DOMAIN');
+});
+
+test('generateProfile defaultDomain: yandex used for tls/quic/sip, explicit domain beats it', () => {
+    const tls = mimicry.generateProfile({ profile: 'tls', defaultDomain: 'yandex.ru', onlyI1: true });
+    assert.equal(parseSNI(parseClientHello(hexOf(tls.i1))), 'yandex.ru');
+    const quic = mimicry.generateProfile({ profile: 'quic', defaultDomain: 'yandex.com' });
+    assert.equal(hexOf(quic.i1).length, 1200);
+    const sip = mimicry.generateProfile({ profile: 'sip', defaultDomain: 'yandex.ru', onlyI1: true });
+    assert.ok(hexOf(sip.i1).toString('ascii').startsWith('REGISTER sip:yandex.ru SIP/2.0'));
+    const explicit = mimicry.generateProfile({ profile: 'tls', defaultDomain: 'yandex.ru', domain: 'my.front.example', onlyI1: true });
+    assert.equal(parseSNI(parseClientHello(hexOf(explicit.i1))), 'my.front.example');
+});
+
+test('generateProfile defaultDomain: per-I dns ignores it (pool question)', () => {
+    const r = mimicry.generateProfile({
+        profile: 'dns', perI: { 2: 'dns' }, defaultDomain: 'yandex.ru',
+        dnsSites: ['icloud.com'], rMin: 2, rMax: 40,
+    });
+    assert.ok(dnsHexOf(r.i2).toString('hex').includes(dnsNameHex('icloud.com')), 'question from dnsSites, not yandex');
 });

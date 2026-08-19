@@ -72,6 +72,46 @@ Notes:
 | `H2` | random | `1234567892` | Magic header response packet. |
 | `H3` | random | `1234567893` | Magic header underload packet. |
 | `H4` | random | `1234567894` | Magic header transport packet. |
+| `S3` | random | `18` | Padding Cookie Reply (v2+; v3 мин. 12 при HPK). |
+| `S4` | random | `20` | Padding данных (v2+; v3 мин. 12 при HPK). |
+
+### Мимикрия CPS (I1–I5, v2/v3)
+
+| Variable | Default | Description |
+|---|---|---|
+| `MIMICRY_PROFILE` | `dns` | Глобальный профиль: `dns\|tls\|quic\|sip`. При `tls`/`quic` I2–I5 = dns |
+| `MIMICRY_PROFILE_I1` | — | Профиль для I1: `dns\|tls\|quic\|sip` (бьёт глобальный) |
+| `MIMICRY_PROFILE_I2`–`MIMICRY_PROFILE_I5` | — | Профиль для I2–I5: **только `dns\|sip`** (tls/quic → clamp к dns + warning; QUIC/TLS разрешены только для I1) |
+| `MIMICRY_BROWSER` | `chrome` | Браузерный отпечаток tls/quic: `chrome\|firefox\|safari` |
+| `MIMICRY_BROWSER_I1` | = `MIMICRY_BROWSER` | Отпечаток именно для I1 |
+| `MIMICRY_DOMAIN` | `yandex.ru`/`yandex.com` | Явный фронт-домен (default по региону: ru → yandex.ru) |
+| `MIMICRY_REGION` | `world` | Пул доменов: `world\|ru` |
+| `MIMICRY_ONLY_I1` | `false` | Генерировать только I1 |
+| `I1`–`I5` | — | Явные CPS-значения, всегда побеждают (`''`/`0`/`null` = отключено) |
+| `I1_DNS_SITES` | `icloud.com,google.com,nvidia.com` | Пул доменов dns-профиля |
+| `I_R_MIN` / `I_R_MAX` | `2` / `40` | Диапазон `<r>` для DNS-пакетов (>40 ломает handshake) |
+| `I_DNS_MIMIC_ALL` | `false` | Alias dns-профиля (только в legacy-пути dns; в per-I dns всегда полный формат) |
+
+Приоритет: явные `I1..I5` > `MIMICRY_PROFILE_I1..I5` > `MIMICRY_PROFILE`.
+I1–I5 — декои, не must-match: смена профиля клиентов не ломает, переэкспорт — для применения.
+
+### AWG 3.0 таймеры и padding (только при `AMNEZIA_VERSION=3`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `HEADER_PROTECTION_KEY_ENABLE` | `true` | Защита заголовков (false — выключить) |
+| `HEADER_PROTECTION_KEY` | авто | 44-char base64 пин. Пусто → генерируется один раз + персист; смена = ротация (клиенты переимпортируют) |
+| `CONTENT_PADDING_ADDITION` | **авто-рандом** | `8-24`–`48-96` байт |
+| `REKEY_AFTER_TIME` | **авто-рандом** | `110-125`–`140-160` сек (дефолт протокола 120с) |
+| `REKEY_TIMEOUT` | **авто-рандом** | `4-10` сек (дефолт 5с) |
+| `REJECT_AFTER_TIME` | **авто-рандом** | `175-190`–`200-215` сек (дефолт 180с; всегда > RekeyAfterTime) |
+| `KEEPALIVE_TIMEOUT` | **авто-рандом** | `9-14`–`20-30` сек (дефолт 10с) |
+| `MAX_HANDSHAKE_ATTEMPTS` | **авто-рандом** | `16-20` (дефолт 18) |
+
+Формат: `N` или `LO-HI` (uint16, HI ≥ LO); демон выбирает значение внутри диапазона случайно.
+Не задано → рандом один раз при первом старте + персист в БД (стабилен между рестартами).
+Пин `(off)` = убрать поле (протокольный дефолт) — парсер amneziawg `(off)` не поддерживает.
+Таймеры не must-match: смена не ломает клиентов, переэкспорт для синхронизации.
 
 ## Web-managed settings
 

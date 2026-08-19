@@ -248,9 +248,12 @@ networks:
 | `H2` | string | Magic header ответного пакета |
 | `H3` | string | Magic header underload пакета |
 | `H4` | string | Magic header транспортного пакета |
-| `MIMICRY_PROFILE` | string | Профиль мимикрии I1–I5: `dns` \| `tls` \| `quic` \| `sip` (по умолчанию: `dns`) |
+| `MIMICRY_PROFILE` | string | Профиль мимикрии I1–I5: `dns` \| `tls` \| `quic` \| `sip` (по умолчанию: `dns`). При `tls`/`quic` I1 получает tls/quic, а I2–I5 = dns |
+| `MIMICRY_PROFILE_I1` | string | Профиль для I1: `dns` \| `tls` \| `quic` \| `sip` (per-I, бьёт глобальный) |
+| `MIMICRY_PROFILE_I2`–`MIMICRY_PROFILE_I5` | string | Профиль для I2–I5: **только `dns` \| `sip`** — QUIC/TLS разрешены только для I1 (tls/quic → clamp к dns + warning) |
 | `MIMICRY_BROWSER` | string | Браузерный отпечаток TLS-пакетов: `chrome` \| `firefox` \| `safari` (по умолчанию: `chrome`; для `tls`/`quic`) |
-| `MIMICRY_DOMAIN` | string | Явный фронт-домен (пусто = случайный из пула региона) |
+| `MIMICRY_BROWSER_I1` | string | Браузерный отпечаток именно для I1 (fallback: `MIMICRY_BROWSER`) |
+| `MIMICRY_DOMAIN` | string | Явный фронт-домен (пусто = `yandex.ru` при region=ru, иначе `yandex.com`) |
 | `MIMICRY_REGION` | string | Пул фронт-доменов: `world` \| `ru` (по умолчанию: `world`) |
 | `MIMICRY_ONLY_I1` | bool | Генерировать только I1 (по умолчанию `false` — все I1–I5) |
 | `I1`–`I5` | string | Явные CPS-значения — всегда побеждают профиль (`''`/`0`/`null` = отключено) |
@@ -261,18 +264,25 @@ networks:
 
 ### 6. Параметры AWG 3.0
 
-Активны только при `AMNEZIA_VERSION=3`. Значения — диапазоны (`lo-hi`) или `(off)` для отключения.
+Активны только при `AMNEZIA_VERSION=3`. Формат: `N` или `LO-HI` (uint16, HI ≥ LO).
 
 | Переменная | По умолчанию | Описание |
 |---|---|---|
 | `HEADER_PROTECTION_KEY_ENABLE` | `true` (v3) | Защита заголовков: `true` по умолчанию для v3, `false` — выключить |
 | `HEADER_PROTECTION_KEY` | авто | 44-символьный base64 пин ключа. Пусто → генерируется один раз при первом старте и сохраняется в БД (стабилен между рестартами). Смена значения = ротация: все клиенты должны переимпортировать конфиги |
-| `CONTENT_PADDING_ADDITION` | `16-128` | Диапазон дополнения содержимого, или `(off)` |
-| `REKEY_AFTER_TIME` | `100-145` | Диапазон времени до пересоздания ключа, или `(off)` |
-| `REKEY_TIMEOUT` | `4-10` | Диапазон таймаута пересоздания ключа, или `(off)` |
-| `REJECT_AFTER_TIME` | `180-200` | Диапазон времени до отбрасывания, или `(off)` |
-| `KEEPALIVE_TIMEOUT` | `8-22` | Диапазон таймаута keepalive, или `(off)` |
-| `MAX_HANDSHAKE_ATTEMPTS` | `12-28` | Диапазон макс. попыток рукопожатия, или `(off)` |
+| `CONTENT_PADDING_ADDITION` | **авто-рандом** | Дополнение содержимого. Не задано → генерируется рандомно один раз при первом старте (`8-24`–`48-96` байт) и сохраняется в БД |
+| `REKEY_AFTER_TIME` | **авто-рандом** | Время до пересоздания ключа. Рандом вокруг протокольного дефолта 120с: `110-125`–`140-160` |
+| `REKEY_TIMEOUT` | **авто-рандом** | Таймаут повтора рукопожатия. Диапазон `4-10` (вокруг дефолта 5с) |
+| `REJECT_AFTER_TIME` | **авто-рандом** | Время до отбрасывания сессии. Рандом вокруг 180с: `175-190`–`200-215`, всегда `> RekeyAfterTime` |
+| `KEEPALIVE_TIMEOUT` | **авто-рандом** | Таймаут keepalive. Рандом вокруг 10с: `9-14`–`20-30` |
+| `MAX_HANDSHAKE_ATTEMPTS` | **авто-рандом** | Макс. попыток рукопожатия. Рандом `16-20` (вокруг дефолта 18) |
+
+Диапазоны генерируются в соответствии с доками Amnezia 3.0: формат `u16_range`
+(`"N"` или `"LO-HI"`), внутри диапазона демон сам выбирает случайное значение
+(`UintRange.PickOne`). Соблюдается инвариант **RejectAfterTime > RekeyAfterTime**.
+Env-пин `(off)` = убрать поле из конфига (протокольный дефолт); сам парсер
+amneziawg `(off)` не поддерживает. Таймеры — не must-match: смена не ломает
+клиентов, переэкспорт — для синхронизации.
 
 ### 7. История Трафика
 
@@ -339,12 +349,18 @@ Must-match у сервера и клиента — только **S1–S4, H1–
 | Профиль | Формат пакетов | I2–I5 |
 |---|---|---|
 | `dns` | DNS-ответ с фейковым IP — `<r N><b 0xTXID+DNS_PAYLOAD>` (проверен боем; домены из `I1_DNS_SITES`) | `<b 0xHEX><r N>`; при `I_DNS_MIMIC_ALL=true` — тоже DNS |
-| `tls` | TLS 1.2 ClientHello `<b 0xHEX>` с браузерным отпечатком (Chrome: GREASE+ALPS; Firefox: NSS-порядок, паддинг до 512 байт; Safari: SecureTransport, TLS 1.1 в supported_versions) | случайные домены из пула региона |
-| `quic` | QUIC v1 Initial `<b 0xHEX>` ~1200 байт (CRYPTO-frame с ClientHello, реальное шифрование RFC 9001) | I2 = второй Initial, I3–I5 = short header |
+| `tls` | TLS 1.2 ClientHello `<b 0xHEX>` с браузерным отпечатком (Chrome: GREASE+ALPS; Firefox: NSS-порядок, паддинг до 512 байт; Safari: SecureTransport, TLS 1.1 в supported_versions) | — (только для I1) |
+| `quic` | QUIC v1 Initial `<b 0xHEX>` ~1200 байт (CRYPTO-frame с ClientHello, реальное шифрование RFC 9001) | — (только для I1) |
 | `sip` | SIP REGISTER `<b 0xHEX>` (Via/From/To/Call-ID/User-Agent) | тот же домен |
 
+**QUIC/TLS — только для I1, всегда.** I2–I5 могут быть только `dns`/`sip`:
+- глобальный `MIMICRY_PROFILE=tls|quic` → I1 = tls/quic, I2–I5 = **dns**
+- per-I `MIMICRY_PROFILE_I2..I5=tls|quic` → clamp к `dns` + warning в логе
+- `MIMICRY_PROFILE_I1` задаёт профиль именно I1 (бьёт глобальный);
+  `MIMICRY_BROWSER_I1` — браузерный отпечаток I1 (fallback: `MIMICRY_BROWSER`)
+
 - **Явные `I1`–`I5`** в env всегда побеждают профиль
-- **`MIMICRY_DOMAIN`** перебивает пул региона (для всех профилей)
+- **`MIMICRY_DOMAIN`** перебивает пул региона (для всех профилей); не задан → `yandex.ru` (region=ru) / `yandex.com`
 - Крупные профили (quic ~1200 байт, firefox 512 байт) могут не поместиться в QR-код (~3 КБ) —
   панель покажет заглушку; используйте `.conf`/`.vpn`
 

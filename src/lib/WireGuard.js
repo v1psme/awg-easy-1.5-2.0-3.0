@@ -3121,23 +3121,37 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
       debug('HeaderProtectionKey disabled — removed from server config');
     }
 
-    // Backfill v3-таймеров/padding (не must-match, но должны быть в серверном конфиге)
-    for (const [prop, envVal] of [
-      ['contentPaddingAddition', awg3Cfg.CONTENT_PADDING_ADDITION],
-      ['rekeyAfterTime', awg3Cfg.REKEY_AFTER_TIME],
-      ['rekeyTimeout', awg3Cfg.REKEY_TIMEOUT],
-      ['rejectAfterTime', awg3Cfg.REJECT_AFTER_TIME],
-      ['keepaliveTimeout', awg3Cfg.KEEPALIVE_TIMEOUT],
-      ['maxHandshakeAttempts', awg3Cfg.MAX_HANDSHAKE_ATTEMPTS],
-    ]) {
-      if (!config.server[prop] && envVal) {
-        config.server[prop] = envVal;
+    // Таймеры/padding v3 (НЕ must-match — локальные тайминги каждого пира).
+    // env-пин → ротация persisted (валидный "N"/"LO-HI"; '(off)' → '' = убрать поле);
+    // env не задан + пусто → рандом из config.js один раз + персист;
+    // env не задан + заполнено → не трогаем (стабильность между рестартами).
+    const awg3Timers = require('./awg3-timers');
+    const TIMER_FIELDS = [
+      ['contentPaddingAddition', 'CONTENT_PADDING_ADDITION'],
+      ['rekeyAfterTime', 'REKEY_AFTER_TIME'],
+      ['rekeyTimeout', 'REKEY_TIMEOUT'],
+      ['rejectAfterTime', 'REJECT_AFTER_TIME'],
+      ['keepaliveTimeout', 'KEEPALIVE_TIMEOUT'],
+      ['maxHandshakeAttempts', 'MAX_HANDSHAKE_ATTEMPTS'],
+    ];
+    for (const [prop, envKey] of TIMER_FIELDS) {
+      const pinned = awg3Timers.normalizeU16Range(process.env[envKey]);
+      if (pinned !== null) {
+        if (config.server[prop] !== pinned) {
+          config.server[prop] = pinned;
+          debug(`${envKey} pinned from env: ${pinned || '(off)'}`);
+        }
+      } else if (config.server[prop] === undefined && awg3Cfg[envKey]) {
+        // строго undefined: '' — осознанное "(off)", его не перезаполняем
+        config.server[prop] = awg3Cfg[envKey];
+        debug(`${prop} generated and persisted: ${awg3Cfg[envKey]}`);
       }
     }
   }
 
   __migrateMimicryProfile(config) {
-    // v2/v3: мимикрия CPS (I1-I5) через MIMICRY_PROFILE (dns|tls|quic|sip).
+    // v2/v3: мимикрия CPS (I1-I5) — глобальный MIMICRY_PROFILE + per-I
+    // MIMICRY_PROFILE_I1..I5 (QUIC/TLS допустимы только для I1, I2-I5: dns|sip).
     // I-значения — декои: их отправляет инициатор хендшейка, принимающая
     // сторона не валидирует (must-match только S1-S4/H1-H4/HeaderProtectionKey).
     // Ротация НЕ ломает существующих клиентов — переэкспорт нужен только
@@ -3147,9 +3161,14 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
       return;
     }
 
-    // Без единой MIMICRY_* в env — no-op: на существующих деплоях
+    // Без единой MIMICRY_* / I1..I5 в env — no-op: на существующих деплоях
     // persisted I-значения не ротируются (обратная совместимость).
-    const MIMICRY_ENV_KEYS = ['MIMICRY_PROFILE', 'MIMICRY_BROWSER', 'MIMICRY_DOMAIN', 'MIMICRY_REGION', 'MIMICRY_ONLY_I1'];
+    // I1..I5 включены: env-пины должны применяться и к существующим конфигам.
+    const MIMICRY_ENV_KEYS = [
+      'MIMICRY_PROFILE', 'MIMICRY_BROWSER', 'MIMICRY_DOMAIN', 'MIMICRY_REGION', 'MIMICRY_ONLY_I1',
+      'MIMICRY_PROFILE_I1', 'MIMICRY_PROFILE_I2', 'MIMICRY_PROFILE_I3', 'MIMICRY_PROFILE_I4', 'MIMICRY_PROFILE_I5',
+      'MIMICRY_BROWSER_I1', 'I1', 'I2', 'I3', 'I4', 'I5',
+    ];
     if (MIMICRY_ENV_KEYS.every((k) => process.env[k] === undefined)) {
       return;
     }
@@ -3165,25 +3184,48 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
       }
     }
 
+    const plan = cfg.MIMICRY_PLAN;
+    const pi = (i) => (plan.perI ? plan.perI[i] : undefined) || '';
     const stored = {
       profile: config.server.mimicryProfile || 'dns',
       browser: config.server.mimicryBrowser || 'chrome',
       domain: config.server.mimicryDomain || '',
       region: config.server.mimicryRegion || 'world',
       onlyI1: !!config.server.mimicryOnlyI1,
+      browserI1: config.server.mimicryBrowserI1 || '',
+      perI1: config.server.mimicryProfileI1 || '',
+      perI2: config.server.mimicryProfileI2 || '',
+      perI3: config.server.mimicryProfileI3 || '',
+      perI4: config.server.mimicryProfileI4 || '',
+      perI5: config.server.mimicryProfileI5 || '',
     };
+    // Маркер browserI1 пишется только при явном env (иначе '' — legacy-деплои не мигрируют);
+    // per-I маркеры — только когда план в per-I режиме (глобальные dns/sip → '').
     const envTuple = {
-      profile: cfg.MIMICRY_PROFILE,
-      browser: cfg.MIMICRY_BROWSER,
-      domain: cfg.MIMICRY_DOMAIN,
-      region: cfg.MIMICRY_REGION,
-      onlyI1: cfg.MIMICRY_ONLY_I1,
+      profile: plan.profile,
+      browser: plan.browser,
+      domain: plan.domain,
+      region: plan.region,
+      onlyI1: plan.onlyI1,
+      browserI1: (process.env.MIMICRY_BROWSER_I1 !== undefined && String(process.env.MIMICRY_BROWSER_I1).trim() !== '')
+        ? plan.browserI1 : '',
+      perI1: pi(1),
+      perI2: pi(2),
+      perI3: pi(3),
+      perI4: pi(4),
+      perI5: pi(5),
     };
     const changed = stored.profile !== envTuple.profile
       || stored.browser !== envTuple.browser
       || stored.domain !== envTuple.domain
       || stored.region !== envTuple.region
-      || stored.onlyI1 !== envTuple.onlyI1;
+      || stored.onlyI1 !== envTuple.onlyI1
+      || stored.browserI1 !== envTuple.browserI1
+      || stored.perI1 !== envTuple.perI1
+      || stored.perI2 !== envTuple.perI2
+      || stored.perI3 !== envTuple.perI3
+      || stored.perI4 !== envTuple.perI4
+      || stored.perI5 !== envTuple.perI5;
     if (!changed) {
       return;
     }
@@ -3191,11 +3233,13 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
     // Профиль сменился (или первый запуск с MIMICRY_* env): регенерируем I1-I5.
     // Поля с env-пином сохраняют значение пина (не перезаписываются).
     const generated = mimicry.generateProfile({
-      profile: envTuple.profile,
-      browser: envTuple.browser,
-      domain: envTuple.domain,
-      region: envTuple.region,
-      onlyI1: envTuple.onlyI1,
+      profile: plan.profile,
+      perI: plan.perI,
+      browser: plan.browserI1,
+      domain: plan.domain,
+      defaultDomain: plan.defaultDomain,
+      region: plan.region,
+      onlyI1: plan.onlyI1,
       dnsSites: cfg.DNS_SITES,
       dnsMimicAll: process.env.I_DNS_MIMIC_ALL === 'true',
       rMin: cfg.I_R_MIN,
@@ -3213,8 +3257,15 @@ iptables -D FORWARD -o wg0 -j ACCEPT;
     config.server.mimicryDomain = envTuple.domain;
     config.server.mimicryRegion = envTuple.region;
     config.server.mimicryOnlyI1 = envTuple.onlyI1;
+    config.server.mimicryBrowserI1 = envTuple.browserI1;
+    config.server.mimicryProfileI1 = envTuple.perI1;
+    config.server.mimicryProfileI2 = envTuple.perI2;
+    config.server.mimicryProfileI3 = envTuple.perI3;
+    config.server.mimicryProfileI4 = envTuple.perI4;
+    config.server.mimicryProfileI5 = envTuple.perI5;
+    const perIStr = plan.perI ? ` [per-I: ${plan.perI[1]}/${plan.perI[2]}/${plan.perI[3]}/${plan.perI[4]}/${plan.perI[5]}]` : '';
     // eslint-disable-next-line no-console
-    console.warn(`Mimicry profile changed to '${envTuple.profile}' (browser: ${envTuple.browser}, region: ${envTuple.region}) — existing clients unaffected (I-values are decoys); re-export client configs to apply the new profile`);
+    console.warn(`Mimicry profile changed to '${envTuple.profile}'${perIStr} (browser: ${envTuple.browser}, region: ${envTuple.region}) — existing clients unaffected (I-values are decoys); re-export client configs to apply the new profile`);
   }
 
   async __initializeConfigUnlocked() {
